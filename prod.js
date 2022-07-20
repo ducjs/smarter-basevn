@@ -1,9 +1,12 @@
+console.log("=======Hello from duclh - SWD=======")
+const version = '0.2.5';
+const env = 'prod';
 
 // ==UserScript==
-// @name         Smarter Base.vn
+// @name         Smarter Base.vn - DEV
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.4
+// @version      0.2.5
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -11,10 +14,6 @@
 // @license MIT
 // ==/UserScript==
 // Repo URL https://greasyfork.org/en/scripts/446802-smarter-base-vn
-
-console.log("=======Hello from duclh - SWD=======")
-const version = '0.2.4';
-const env = 'dev';
 
 const CONFIG = {
   SERVICE: {
@@ -24,7 +23,7 @@ const CONFIG = {
     "wework": {
       TITLE_SELECTOR: "#js-task-display > div.main-body > div.section.js-task-main > div.task-main > div.edit-box.compact.edit-task-name > div.edit-display > h1",
       BG_COLOR: "rgb(88 159 201 / 44%)",
-      LINK_SELECTOR: ".mn .url"
+      LINK_SELECTOR: ".tasklist .tasks div"
     },
     "meeting": {
       TITLE_SELECTOR: "#js-meeting-cover > div.main > div > div.text > div.name > span",
@@ -62,19 +61,21 @@ const CONFIG = {
 const main_makeEverythingMiddleClickAble = () => {
   let taskUrl = "https://wework.base.vn" + window.location.pathname + "?task=";
   let currentService = utils_getCurrentService();
-  let links = document.querySelectorAll(CONFIG.SERVICE[currentService].LINK_SELECTOR);
+  let links = document.querySelectorAll(CONFIG.SERVICE.wework.LINK_SELECTOR);
 
   for (let link of links) {
-    let taskId = link.getAttribute("data-url");
+    let linkDiv = link.querySelector(".mn .url");
+    if (!linkDiv) continue;
+
+    let isDone = link.querySelector(".check.url") && link.querySelector(".check.url").innerHTML.includes("-done");
+    let taskId = linkDiv.getAttribute("data-url");
     if (!taskId || taskId === "") continue;
     taskId = taskId.split("/")[1];
 
-    let newATag = link.outerHTML;
+    let newATag = linkDiv.outerHTML;
     newATag = newATag.replace("</span>", "</a>");
-    newATag = newATag.replace("<span", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 500"  `);
-    link.outerHTML = newATag;
-    link.style.fontWeight = "inherit";
-
+    newATag = newATag.replace("<span", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 400; ${!isDone && "color: #111"}"  `);
+    linkDiv.outerHTML = newATag;
   }
 
 }
