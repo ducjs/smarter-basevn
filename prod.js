@@ -3,10 +3,10 @@ const version = '0.2.5';
 const env = 'prod';
 
 // ==UserScript==
-// @name         Smarter Base.vn - DEV
+// @name         Smarter Base.vn
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.5
+// @version      0.2.6
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
