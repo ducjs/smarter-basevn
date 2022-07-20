@@ -1,19 +1,21 @@
+
 // ==UserScript==
 // @name         Smarter Base.vn
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.3
+// @version      0.2.4
 // @author       duclh - SWD
-// @include_old  /https:\/\/(meeting|wework|request|office).base.vn/(.*)
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
 // @grant        none
 // @license MIT
-// @downloadURL none
 // ==/UserScript==
 // Repo URL https://greasyfork.org/en/scripts/446802-smarter-base-vn
 
-console.log("=======Hello from duclh - SWD;=======")
+console.log("=======Hello from duclh - SWD=======")
+const version = '0.2.4';
+const env = 'dev';
+
 const CONFIG = {
   SERVICE: {
     "all": {
@@ -21,7 +23,8 @@ const CONFIG = {
     },
     "wework": {
       TITLE_SELECTOR: "#js-task-display > div.main-body > div.section.js-task-main > div.task-main > div.edit-box.compact.edit-task-name > div.edit-display > h1",
-      BG_COLOR: "rgb(88 159 201 / 44%)"
+      BG_COLOR: "rgb(88 159 201 / 44%)",
+      LINK_SELECTOR: ".mn .url"
     },
     "meeting": {
       TITLE_SELECTOR: "#js-meeting-cover > div.main > div > div.text > div.name > span",
@@ -46,6 +49,7 @@ const CONFIG = {
   },
   HIDE_NOTI: [],
   NOTI: {
+    LOAD_MORE_NUMBER: 2,
     OPEN_NOTI_SELECTOR: "#navigator > div.header > div.icon",
     LOAD_MORE_SELECTOR: ".-more"
   },
@@ -55,22 +59,41 @@ const CONFIG = {
 };
 
 
+const main_makeEverythingMiddleClickAble = () => {
+  let taskUrl = "https://wework.base.vn" + window.location.pathname + "?task=";
+  let currentService = utils_getCurrentService();
+  let links = document.querySelectorAll(CONFIG.SERVICE[currentService].LINK_SELECTOR);
+
+  for (let link of links) {
+    let taskId = link.getAttribute("data-url");
+    if (!taskId || taskId === "") continue;
+    taskId = taskId.split("/")[1];
+
+    let newATag = link.outerHTML;
+    newATag = newATag.replace("</span>", "</a>");
+    newATag = newATag.replace("<span", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 500"  `);
+    link.outerHTML = newATag;
+    link.style.fontWeight = "inherit";
+
+  }
+
+}
 
 const main_smarterThings = () => {
-  document.querySelector(CONFIG.THEME.MASK_SELECTOR).setAttribute("onclick", "TaskDisplay.close();");
+  //  document.querySelector(CONFIG.THEME.MASK_SELECTOR).setAttribute("onclick","TaskDisplay.close();");
 }
 
 
 const main_smarterNoti = () => {
   utils_stylingFilterBar();
-  utils_loadMoreNoti({ num: 6, isFirstTime: true });
+  utils_loadMoreNoti({ num: CONFIG.NOTI.LOAD_MORE_NUMBER, isFirstTime: true });
 
   const all = () => utils_showNotiByService("all");
 
   const ww = () => utils_showNotiByService("wework");
   const rq = () => utils_showNotiByService("request");
   const wf = () => utils_showNotiByService("workflow");
-  const of = () => utils_showNotiByService("office");
+  const off = () => utils_showNotiByService("office");
   const hir = () => utils_showNotiByService("hiring");
   const mt = () => utils_showNotiByService("meeting");
 
@@ -79,7 +102,7 @@ const main_smarterNoti = () => {
     ["wework", ww],
     ["request", rq],
     ["workflow", wf],
-    ["office", of],
+    ["office", off],
     ["hiring", hir],
     ["meeting", mt],
   ];
@@ -149,35 +172,14 @@ const main_smarterTitle = () => {
   let oldTitle = "";
   let hostName = utils_getCurrentService();
 
-  //const interval = setInterval(() => {
   let newTitle = document.querySelector(CONFIG.SERVICE[hostName].TITLE_SELECTOR);
   if (newTitle && newTitle !== oldTitle) {
     oldTitle = newTitle;
     document.title = newTitle.innerHTML;
   }
-  //}, 1000)
+
 }
 
-const main_hyperlinkTask = () => {
-  let taskList = document.querySelectorAll(".js-task,.js-subtask .name");
-  for (let task of taskList) {
-    let url = task.querySelector(".url").getAttribute("data-url")
-    let taskId = url.split("/")[1]
-
-    let groupServiceButton = document.createElement("a");
-    groupServiceButton.className = "istat";
-
-    groupServiceButton.setAttribute("href", `tasks?task=${taskId}`);
-    groupServiceButton.setAttribute("target", "_blank");
-    groupServiceButton.id = "hyperlink";
-    groupServiceButton.innerHTML = `<span class="-ap icon-open"></span>`;
-    if (task.querySelectorAll("#hyperlink").length == 0) {
-      task.querySelector('.istats').appendChild(groupServiceButton);
-
-    }
-
-  }
-}
 
 const utils_getCurrentService = () => {
   let hostName = window.location.hostname;
@@ -214,7 +216,6 @@ const utils_showNotiByService = (selectedService, filter = {}) => {
 }
 
 const utils_stylingFilterBar = () => {
-  //document.querySelector("#base-notis > div.list.list-notis").style.position = "absolute";
   let titleNoti = document.querySelector(".-title");
   if (titleNoti) {
     titleNoti.style.width = "300%";
@@ -267,7 +268,10 @@ const utils_getUserConfig = () => {
   let userInfo = JSON.parse(localStorage.getItem('ajs_user_traits'));
   userInfo = {
     name: userInfo.name,
-    email: userInfo.email
+    email: userInfo.email,
+    version,
+    env
+    //product_id: userInfo.product_id
   }
 
   fetch(pingUrl, {
@@ -278,12 +282,15 @@ const utils_getUserConfig = () => {
       'Content-Type': 'text/plain;charset=utf-8',
     }
   })
-  //.then(response => response.json())
-  //.then(data => console.log(data));
+    .then(response => response.json())
+    .then(data => {
+      console.log(data)
+    });
 }
 
-(function () {
-  var proxied = window.XMLHttpRequest.prototype.open;
+
+const utils_hookApi = () => {
+  let proxied = window.XMLHttpRequest.prototype.open;
   window.XMLHttpRequest.prototype.open = function () {
     let xhrUrl = arguments[1];
     console.log("==============CATCH API ", arguments);
@@ -291,18 +298,29 @@ const utils_getUserConfig = () => {
     if (xhrUrl.includes("/ajax/api/comment/load")) {
       main_smarterTitle();
     };
-    if (xhrUrl.includes("/ajax/api/activity")) { // Onclick link, page is not fully reloaded.
+    if (xhrUrl.includes("/ajax/api/activity")) {
       // main_hyperlinkTask();
     };
 
+    if (xhrUrl.includes("wework.base.vn")) {
+      setTimeout(() => main_makeEverythingMiddleClickAble(), 2000);
+    };
+    if (xhrUrl.includes("/ajax/task/display")) { // Page task WW
+
+    };
+
+
     return proxied.apply(this, [].slice.call(arguments));
   };
-})();
+}
 
 
 
-utils_getUserConfig()
+
 main_smarterThings();
 main_smarterNoti();
 main_smarterTaskTime();
+main_makeEverythingMiddleClickAble();
 
+utils_getUserConfig();
+utils_hookApi();
