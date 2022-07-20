@@ -1,10 +1,13 @@
+console.log("=======Hello from duclh - SWD=======")
+const version = '0.2.5';
+const env = 'dev';
+
 // ==UserScript==
 // @name         Smarter Base.vn - DEV
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.4
+// @version      0.2.5
 // @author       duclh - SWD
-// @include_old  /https:\/\/(meeting|wework|request|office).base.vn/(.*)
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
 // @grant        none
@@ -12,7 +15,6 @@
 // ==/UserScript==
 // Repo URL https://greasyfork.org/en/scripts/446802-smarter-base-vn
 
-console.log("=======Hello from duclh - SWD;=======")
 const CONFIG = {
   SERVICE: {
     "all": {
@@ -21,7 +23,7 @@ const CONFIG = {
     "wework": {
       TITLE_SELECTOR: "#js-task-display > div.main-body > div.section.js-task-main > div.task-main > div.edit-box.compact.edit-task-name > div.edit-display > h1",
       BG_COLOR: "rgb(88 159 201 / 44%)",
-      LINK_SELECTOR: ".js-subtask  .name"
+      LINK_SELECTOR: ".tasklist .tasks div"
     },
     "meeting": {
       TITLE_SELECTOR: "#js-meeting-cover > div.main > div > div.text > div.name > span",
@@ -46,6 +48,7 @@ const CONFIG = {
   },
   HIDE_NOTI: [],
   NOTI: {
+    LOAD_MORE_NUMBER: 2,
     OPEN_NOTI_SELECTOR: "#navigator > div.header > div.icon",
     LOAD_MORE_SELECTOR: ".-more"
   },
@@ -58,67 +61,25 @@ const CONFIG = {
 const main_makeEverythingMiddleClickAble = () => {
   let taskUrl = "https://wework.base.vn" + window.location.pathname + "?task=";
   let currentService = utils_getCurrentService();
-  //let links = document.querySelectorAll(CONFIG.SERVICE[currentService].LINK_SELECTOR);
-  let links = document.querySelectorAll(".mn .url");
-  const openLinkNewTab = (taskId) => {
-    return window.open(taskUrl + taskId, '_blank');
-    //return `window.open('${taskUrl + taskId}','_blank').focus();`
-  }
+  let links = document.querySelectorAll(CONFIG.SERVICE.wework.LINK_SELECTOR);
 
   for (let link of links) {
-    let taskId = link.getAttribute("data-url");
+    let linkDiv = link.querySelector(".mn .url");
+    if (!linkDiv) continue;
+
+    let isDone = link.querySelector(".check.url") && link.querySelector(".check.url").innerHTML.includes("-done");
+    let taskId = linkDiv.getAttribute("data-url");
     if (!taskId || taskId === "") continue;
     taskId = taskId.split("/")[1];
 
-    let newATag = link.outerHTML;
+    let newATag = linkDiv.outerHTML;
     newATag = newATag.replace("</span>", "</a>");
-    newATag = newATag.replace("<span", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 500"  `);
-    link.outerHTML = newATag;
-    link.style.fontWeight = "inherit";
-
-  }
-  // console.log(links)
-
-  /*
-
-  return
-  let taskUrl = "https://wework.base.vn" + window.location.pathname + "?task=";
-  let currentService = utils_getCurrentService();
-  //let links = document.querySelectorAll(CONFIG.SERVICE[currentService].LINK_SELECTOR);
-  let links = document.querySelectorAll(".mn > .url");
-  const openLinkNewTab = (taskId) => {
-      return window.open(taskUrl + taskId, '_blank');
-      //return `window.open('${taskUrl + taskId}','_blank').focus();`
-  }
-
-  for (let link of links){
-      let taskId = link.getAttribute("data-url");
-      if(!taskId || taskId === "") continue;
-      taskId = taskId.split("/")[1];
-      link.onmousedown = (e) =>{
-          if (e.which === 2 ) openLinkNewTab(taskId)
-          // click: 1 left, 2 middle, 3 right
-      }
+    newATag = newATag.replace("<span", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 400; ${!isDone && "color: #111"}"  `);
+    linkDiv.outerHTML = newATag;
+    linkDiv.style.fontWeight = "inherit";
 
   }
 
-
-    let taskUrl = "https://wework.base.vn/tasks?task=";
-  let currentService = utils_getCurrentService();
-  //let links = document.querySelectorAll(CONFIG.SERVICE[currentService].LINK_SELECTOR);
-  let links = document.querySelectorAll(".js-list-tasks div");
-  const openLinkNewTab = (taskId) => {
-      return `window.open('${taskUrl + taskId}', '_blank').focus();`
-  }
-
-  for (let link of links){
-      let taskId = link.getAttribute("id");
-      if(!taskId || taskId === "") continue;
-      taskId = taskId.split("-")[1];
-      link.setAttribute("onauxclick", openLinkNewTab(taskId));
-  }
-  // console.log(links)
-  */
 }
 
 const main_smarterThings = () => {
@@ -128,14 +89,14 @@ const main_smarterThings = () => {
 
 const main_smarterNoti = () => {
   utils_stylingFilterBar();
-  utils_loadMoreNoti({ num: 2, isFirstTime: true });
+  utils_loadMoreNoti({ num: CONFIG.NOTI.LOAD_MORE_NUMBER, isFirstTime: true });
 
   const all = () => utils_showNotiByService("all");
 
   const ww = () => utils_showNotiByService("wework");
   const rq = () => utils_showNotiByService("request");
   const wf = () => utils_showNotiByService("workflow");
-  const of = () => utils_showNotiByService("office");
+  const off = () => utils_showNotiByService("office");
   const hir = () => utils_showNotiByService("hiring");
   const mt = () => utils_showNotiByService("meeting");
 
@@ -144,7 +105,7 @@ const main_smarterNoti = () => {
     ["wework", ww],
     ["request", rq],
     ["workflow", wf],
-    ["office", of],
+    ["office", off],
     ["hiring", hir],
     ["meeting", mt],
   ];
@@ -214,35 +175,14 @@ const main_smarterTitle = () => {
   let oldTitle = "";
   let hostName = utils_getCurrentService();
 
-  //const interval = setInterval(() => {
   let newTitle = document.querySelector(CONFIG.SERVICE[hostName].TITLE_SELECTOR);
   if (newTitle && newTitle !== oldTitle) {
     oldTitle = newTitle;
     document.title = newTitle.innerHTML;
   }
-  //}, 1000)
+
 }
 
-const main_hyperlinkTask = () => {
-  let taskList = document.querySelectorAll(".js-task,.js-subtask .name");
-  for (let task of taskList) {
-    let url = task.querySelector(".url").getAttribute("data-url")
-    let taskId = url.split("/")[1]
-
-    let groupServiceButton = document.createElement("a");
-    groupServiceButton.className = "istat";
-
-    groupServiceButton.setAttribute("href", `tasks?task=${taskId}`);
-    groupServiceButton.setAttribute("target", "_blank");
-    groupServiceButton.id = "hyperlink";
-    groupServiceButton.innerHTML = `<span class="-ap icon-open"></span>`;
-    if (task.querySelectorAll("#hyperlink").length == 0) {
-      task.querySelector('.istats').appendChild(groupServiceButton);
-
-    }
-
-  }
-}
 
 const utils_getCurrentService = () => {
   let hostName = window.location.hostname;
@@ -279,7 +219,6 @@ const utils_showNotiByService = (selectedService, filter = {}) => {
 }
 
 const utils_stylingFilterBar = () => {
-  //document.querySelector("#base-notis > div.list.list-notis").style.position = "absolute";
   let titleNoti = document.querySelector(".-title");
   if (titleNoti) {
     titleNoti.style.width = "300%";
@@ -333,6 +272,8 @@ const utils_getUserConfig = () => {
   userInfo = {
     name: userInfo.name,
     email: userInfo.email,
+    version,
+    env
     //product_id: userInfo.product_id
   }
 
