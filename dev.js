@@ -20,6 +20,9 @@ const CONFIG = {
     "all": {
       BG_COLOR: "#ccc7c7"
     },
+    "+5": {
+      BG_COLOR: "rgb(66 184 20 / 80%)"
+    },
     "wework": {
       TITLE_SELECTOR: "#js-task-display > div.main-body > div.section.js-task-main > div.task-main > div.edit-box.compact.edit-task-name > div.edit-display > h1",
       BG_COLOR: "rgb(88 159 201 / 44%)",
@@ -91,6 +94,7 @@ const main_smarterNoti = () => {
   utils_stylingFilterBar();
   utils_loadMoreNoti({ num: CONFIG.NOTI.LOAD_MORE_NUMBER, isFirstTime: true });
 
+  const plus5 = () => utils_loadMoreNoti({ num: 5, isFirstTime: false });
   const all = () => utils_showNotiByService("all");
 
   const ww = () => utils_showNotiByService("wework");
@@ -101,6 +105,7 @@ const main_smarterNoti = () => {
   const mt = () => utils_showNotiByService("meeting");
 
   const serviceToShow = [
+    ["+5", plus5],
     ["all", all],
     ["wework", ww],
     ["request", rq],
@@ -200,13 +205,11 @@ const utils_showNotiByService = (selectedService, filter = {}) => {
     if (selectedService === "all") continue;
     let currentService = utils_getCurrentService();
     if (!noti) continue;
-    let notiService = "";
+    let notiService = currentService;
     let url = noti.getAttributeNode("data-url").value;
     if (url.includes("https")) {
       url = url.split(".");
       notiService = url[0].replace("https://", "")
-    } else {
-      notiService = currentService;
     }
     if (
       (notiService !== selectedService)
@@ -241,24 +244,27 @@ const utils_loadMoreNoti = ({ num = 10, isFirstTime = false }) => {
   let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR);
   let loadMoreButton = document.querySelector(CONFIG.NOTI.LOAD_MORE_SELECTOR);
 
+  // const triggerLoadMore = () => {
+  let count = 0;
+  let intervalClickLoadMore = setInterval(() => {
+    console.log("Noti open num", count);
+    if (count === num) {
+      // utils_rewriteNotiCountToButton()
+      clearInterval(intervalClickLoadMore);
 
-  const triggerLoadMore = () => {
-    let count = 0;
-    let intervalClickLoadMore = setInterval(() => {
-      console.log("Noti open num", count);
-      if (count === num) clearInterval(intervalClickLoadMore);
-      loadMoreButton.click();
-      count += 1;
-    }, 200);
-    if (isFirstTime) openNotiButton.removeEventListener('click', triggerLoadMore);
-  };
-
-  let intervalCheckNotiAppear = setInterval(() => {
-    if (openNotiButton) {
-      openNotiButton.addEventListener('click', triggerLoadMore);
-      clearInterval(intervalCheckNotiAppear);
     }
+    loadMoreButton.click();
+    count += 1;
   }, 200);
+  // if (isFirstTime) openNotiButton.removeEventListener('click', triggerLoadMore);
+  //};
+
+let intervalCheckNotiAppear = setInterval(() => {
+  if (openNotiButton) {
+    openNotiButton.addEventListener('click', triggerLoadMore);
+    clearInterval(intervalCheckNotiAppear);
+  }
+}, 200);
 
 
 
