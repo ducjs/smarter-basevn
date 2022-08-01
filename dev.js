@@ -70,8 +70,16 @@ let notiCountIntial = {
   "hiring": 0
 };
 let notiCount = { ...notiCountIntial };
-
 let gridFilterService = document.createElement("div");
+
+const main_styling = () => {
+  // let loadingDiv = document.querySelector('#base-xs');
+  // let noNeedLoading = setInterval(() => {
+  //   if (loadingDiv.style.display === '') loadingDiv.style.display = "none";
+  //   clearInterval(noNeedLoading);
+  // }, 50)
+
+};
 
 const main_makeEverythingMiddleClickAble = () => {
   let taskUrl = "https://wework.base.vn" + window.location.pathname + "?task=";
@@ -95,15 +103,10 @@ const main_makeEverythingMiddleClickAble = () => {
 
 }
 
-const main_smarterThings = () => {
-  //  document.querySelector(CONFIG.THEME.MASK_SELECTOR).setAttribute("onclick","TaskDisplay.close();");
-}
-
-
 const main_smarterNoti = () => {
-  utils_stylingFilterBar();
   addAction_onClickNoti();
-  utils_loadMoreNoti({ num: CONFIG.NOTI.LOAD_MORE_NUMBER, isFirstTime: true });
+  utils_stylingFilterBar();
+  // utils_loadMoreNoti({ num: CONFIG.NOTI.LOAD_MORE_NUMBER, isFirstTime: true });
 
   const all = () => utils_showNotiByService("all");
 
@@ -116,8 +119,8 @@ const main_smarterNoti = () => {
 
   const plus5 = () => utils_loadMoreNoti({ num: 5, isFirstTime: false });
 
-  const serviceToShow = [
-    ["+5", plus5],
+  const grid_1 = [
+    // ["+5", plus5],
     ["all", all],
     ["wework", ww],
     ["request", rq],
@@ -143,7 +146,7 @@ const main_smarterNoti = () => {
   //titleDiv.appendChild(gridFilterSomething);
   //titleDiv.appendChild(gridFilterPeople);
 
-  for (let service of serviceToShow) {
+  for (let service of grid_1) {
     let filterServiceButton = document.createElement("button");
     filterServiceButton.classList.add("filter-service");
     filterServiceButton.classList.add(`s-${service[0]}`);
@@ -258,6 +261,7 @@ const noti_recountNoti = () => {
       if (!CONFIG.SERVICE[notiService]) continue;
       // if (!CONFIG.SERVICE[notiService].notiCount) CONFIG.SERVICE[notiService].notiCount = 0;
       notiCount[notiService] += 1;
+      notiCount['all'] += 1;
     };
     utils_rewriteNotiCountToButton();
   }, 1000);
@@ -363,10 +367,10 @@ const utils_hookApi = () => {
 
 
 
-main_smarterThings();
 main_smarterNoti();
 main_smarterTaskTime();
 main_makeEverythingMiddleClickAble();
+// main_styling();
 
 utils_getUserConfig();
 utils_hookApi();
