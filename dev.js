@@ -1,12 +1,12 @@
 console.log("=======Hello from duclh - SWD=======")
-const version = '0.2.5';
+const version = '0.2.7';
 const env = 'dev';
 
 // ==UserScript==
 // @name         Smarter Base.vn - DEV
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.5
+// @version      0.2.7
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -15,7 +15,7 @@ const env = 'dev';
 // ==/UserScript==
 // Repo URL https://greasyfork.org/en/scripts/446802-smarter-base-vn
 
-const CONFIG = {
+let CONFIG = {
   SERVICE: {
     "all": {
       BG_COLOR: "#ccc7c7"
@@ -60,6 +60,18 @@ const CONFIG = {
   }
 };
 
+let notiCountIntial = {
+  "all": 0,
+  "wework": 0,
+  "meeting": 0,
+  "request": 0,
+  "workflow": 0,
+  "office": 0,
+  "hiring": 0
+};
+let notiCount = { ...notiCountIntial };
+
+let gridFilterService = document.createElement("div");
 
 const main_makeEverythingMiddleClickAble = () => {
   let taskUrl = "https://wework.base.vn" + window.location.pathname + "?task=";
@@ -79,8 +91,6 @@ const main_makeEverythingMiddleClickAble = () => {
     newATag = newATag.replace("</span>", "</a>");
     newATag = newATag.replace("<span", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 400; ${!isDone && "color: #111"}"  `);
     linkDiv.outerHTML = newATag;
-    linkDiv.style.fontWeight = "inherit";
-
   }
 
 }
@@ -92,9 +102,9 @@ const main_smarterThings = () => {
 
 const main_smarterNoti = () => {
   utils_stylingFilterBar();
+  addAction_onClickNoti();
   utils_loadMoreNoti({ num: CONFIG.NOTI.LOAD_MORE_NUMBER, isFirstTime: true });
 
-  const plus5 = () => utils_loadMoreNoti({ num: 5, isFirstTime: false });
   const all = () => utils_showNotiByService("all");
 
   const ww = () => utils_showNotiByService("wework");
@@ -103,6 +113,8 @@ const main_smarterNoti = () => {
   const off = () => utils_showNotiByService("office");
   const hir = () => utils_showNotiByService("hiring");
   const mt = () => utils_showNotiByService("meeting");
+
+  const plus5 = () => utils_loadMoreNoti({ num: 5, isFirstTime: false });
 
   const serviceToShow = [
     ["+5", plus5],
@@ -118,7 +130,6 @@ const main_smarterNoti = () => {
   if (!titleDiv) return;
   titleDiv.innerHTML = "";
 
-  let gridFilterService = document.createElement("div");
   gridFilterService.style.display = "inline-block";
   gridFilterService.style.borderRight = "2px ridge grey";
 
@@ -134,7 +145,9 @@ const main_smarterNoti = () => {
 
   for (let service of serviceToShow) {
     let filterServiceButton = document.createElement("button");
-    filterServiceButton.innerText = service[0];
+    filterServiceButton.classList.add("filter-service");
+    filterServiceButton.classList.add(`s-${service[0]}`);
+    filterServiceButton.innerText = `${service[0]}`;
     filterServiceButton.onclick = service[1];
     filterServiceButton.style.backgroundColor = CONFIG.SERVICE[service[0]].BG_COLOR;
     utils_stylingFilterButton(filterServiceButton);
@@ -214,10 +227,50 @@ const utils_showNotiByService = (selectedService, filter = {}) => {
     if (
       (notiService !== selectedService)
       || noti.getElementsByClassName("-title")[0].innerHTML.includes("sinh nhật")
-
     ) {
       noti = noti.classList.add("hidden");
     };
+  }
+}
+
+const addAction_onClickNoti = () => {
+  let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR);
+  let intervalCheckNotiAppear = setInterval(() => {
+    if (openNotiButton) {
+      openNotiButton.addEventListener('click', noti_recountNoti);
+      clearInterval(intervalCheckNotiAppear);
+    }
+  }, 200);
+}
+
+const noti_recountNoti = () => {
+  notiCount = { ...notiCountIntial };
+  setTimeout(() => {
+    let notis = document.getElementsByClassName("notis");
+    let currentService = utils_getCurrentService();
+    for (let noti of notis) {
+      let notiService = currentService;
+      let url = noti.getAttributeNode("data-url").value;
+      if (url.includes("https")) {
+        url = url.split(".");
+        notiService = url[0].replace("https://", "")
+      };
+      if (!CONFIG.SERVICE[notiService]) continue;
+      // if (!CONFIG.SERVICE[notiService].notiCount) CONFIG.SERVICE[notiService].notiCount = 0;
+      notiCount[notiService] += 1;
+    };
+    utils_rewriteNotiCountToButton();
+  }, 1000);
+}
+
+const utils_rewriteNotiCountToButton = () => {
+  console.log(notiCount)
+  let openNotiButton = document.querySelectorAll(".filter-service");
+  for (let btn of openNotiButton) {
+    let serviceName = btn.classList[1];
+    if (serviceName) serviceName = serviceName.split('s-')[1];
+    let serviceNotiCount = notiCount[serviceName] || 0;
+    btn.innerText = `${serviceNotiCount} - ${serviceName}`;
   }
 }
 
@@ -241,38 +294,23 @@ const utils_stylingFilterButton = (filterServiceButton) => {
 }
 
 const utils_loadMoreNoti = ({ num = 10, isFirstTime = false }) => {
-  let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR);
   let loadMoreButton = document.querySelector(CONFIG.NOTI.LOAD_MORE_SELECTOR);
 
-  // const triggerLoadMore = () => {
   let count = 0;
   let intervalClickLoadMore = setInterval(() => {
     console.log("Noti open num", count);
     if (count === num) {
-      // utils_rewriteNotiCountToButton()
       clearInterval(intervalClickLoadMore);
-
+      noti_recountNoti()
     }
     loadMoreButton.click();
     count += 1;
   }, 200);
-  // if (isFirstTime) openNotiButton.removeEventListener('click', triggerLoadMore);
-  //};
-
-let intervalCheckNotiAppear = setInterval(() => {
-  if (openNotiButton) {
-    openNotiButton.addEventListener('click', triggerLoadMore);
-    clearInterval(intervalCheckNotiAppear);
-  }
-}, 200);
-
-
 
 }
 
 
 const utils_getUserConfig = () => {
-  //const pingUrl = 'https://eokn9pa90k2ue1z.m.pipedream.net';
   const pingUrl = 'https://script.google.com/macros/s/AKfycbwq3EpWpIY4zpebj3svXRsenyr_2kSTZvNuArOj5plyQE0Mp4EXVoGa4v4fmhwU4QkAkg/exec';
   let userInfo = JSON.parse(localStorage.getItem('ajs_user_traits'));
   userInfo = {
@@ -280,7 +318,6 @@ const utils_getUserConfig = () => {
     email: userInfo.email,
     version,
     env
-    //product_id: userInfo.product_id
   }
 
   fetch(pingUrl, {
