@@ -70,7 +70,15 @@ let notiCountIntial = {
   "hiring": 0
 };
 let notiCount = { ...notiCountIntial };
-let gridFilterService = document.createElement("div");
+let noti_grid_1 = document.createElement("div");
+noti_grid_1.style.display = "inline-block";
+noti_grid_1.style.borderRight = "2px ridge grey";
+noti_grid_1.style.paddingRight = "5px";
+
+let noti_grid_2 = document.createElement("div");
+noti_grid_2.style.display = "inline-block";
+noti_grid_2.style.marginLeft = "5px";
+// noti_grid_2.style.borderRight = "2px ridge grey";
 
 const main_styling = () => {
   // let loadingDiv = document.querySelector('#base-xs');
@@ -119,8 +127,7 @@ const main_smarterNoti = () => {
 
   const plus5 = () => utils_loadMoreNoti({ num: 5, isFirstTime: false });
 
-  const grid_1 = [
-    // ["+5", plus5],
+  const grid_1_items = [
     ["all", all],
     ["wework", ww],
     ["request", rq],
@@ -129,24 +136,21 @@ const main_smarterNoti = () => {
     ["hiring", hir],
     ["meeting", mt],
   ];
+
+  const grid_2_items = [
+    ["+5", plus5],
+  ];
   let titleDiv = document.querySelector("#base-notis > div.list.list-notis > div.-title");
   if (!titleDiv) return;
   titleDiv.innerHTML = "";
 
-  gridFilterService.style.display = "inline-block";
-  gridFilterService.style.borderRight = "2px ridge grey";
 
-  let gridFilterSomething = document.createElement("div");
-  gridFilterSomething.style.display = "inline-block";
-
-  let gridFilterPeople = document.createElement("div");
-  gridFilterPeople.style.display = "inline-block";
-
-  titleDiv.appendChild(gridFilterService);
+  titleDiv.appendChild(noti_grid_1);
+  titleDiv.appendChild(noti_grid_2);
   //titleDiv.appendChild(gridFilterSomething);
   //titleDiv.appendChild(gridFilterPeople);
 
-  for (let service of grid_1) {
+  for (let service of grid_1_items) {
     let filterServiceButton = document.createElement("button");
     filterServiceButton.classList.add("filter-service");
     filterServiceButton.classList.add(`s-${service[0]}`);
@@ -154,8 +158,19 @@ const main_smarterNoti = () => {
     filterServiceButton.onclick = service[1];
     filterServiceButton.style.backgroundColor = CONFIG.SERVICE[service[0]].BG_COLOR;
     utils_stylingFilterButton(filterServiceButton);
-    if (titleDiv) gridFilterService.appendChild(filterServiceButton);
+    if (titleDiv) noti_grid_1.appendChild(filterServiceButton);
   }
+
+  for (let service_2 of grid_2_items) {
+    let btn = document.createElement("button");
+    btn.innerText = `+5 trang (Ấn nhẹ tay thôi nhé, nhiều quá lag)`;
+    // btn.innerText = `${service_2[0]}`;
+    btn.onclick = service_2[1];
+    btn.style.backgroundColor = CONFIG.SERVICE[service_2[0]].BG_COLOR;
+    utils_stylingFilterButton(btn);
+    if (titleDiv) noti_grid_2.appendChild(btn);
+  }
+
 
 }
 
@@ -252,6 +267,7 @@ const noti_recountNoti = () => {
     let notis = document.getElementsByClassName("notis");
     let currentService = utils_getCurrentService();
     for (let noti of notis) {
+      notiCount['all'] += 1;
       let notiService = currentService;
       let url = noti.getAttributeNode("data-url").value;
       if (url.includes("https")) {
@@ -261,7 +277,6 @@ const noti_recountNoti = () => {
       if (!CONFIG.SERVICE[notiService]) continue;
       // if (!CONFIG.SERVICE[notiService].notiCount) CONFIG.SERVICE[notiService].notiCount = 0;
       notiCount[notiService] += 1;
-      notiCount['all'] += 1;
     };
     utils_rewriteNotiCountToButton();
   }, 1000);
