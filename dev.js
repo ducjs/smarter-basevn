@@ -15,6 +15,7 @@ const env = 'dev';
 // ==/UserScript==
 // Repo URL https://greasyfork.org/en/scripts/446802-smarter-base-vn
 
+let currentUrl = window.location.href;
 let CONFIG = {
   SERVICE: {
     "all": {
@@ -89,25 +90,41 @@ const main_styling = () => {
 
 };
 
-const main_makeEverythingMiddleClickAble = () => {
+const main_makeWwCanHyperlink = () => {
   let taskUrl = "https://wework.base.vn" + window.location.pathname + "?task=";
-  let currentService = utils_getCurrentService();
   let links = document.querySelectorAll(CONFIG.SERVICE.wework.LINK_SELECTOR);
 
-  for (let link of links) {
-    let linkDiv = link.querySelector(".mn .url");
-    if (!linkDiv) continue;
+  if (links.length) {
+    for (let link of links) {
+      let linkDiv = link.querySelector(".mn .url");
+      if (!linkDiv) continue;
 
-    let isDone = link.querySelector(".check.url") && link.querySelector(".check.url").innerHTML.includes("-done");
-    let taskId = linkDiv.getAttribute("data-url");
-    if (!taskId || taskId === "") continue;
-    taskId = taskId.split("/")[1];
+      let isDone = link.querySelector(".check.url") && link.querySelector(".check.url").innerHTML.includes("-done");
+      let taskId = linkDiv.getAttribute("data-url");
+      if (!taskId || taskId === "") continue;
+      taskId = taskId.split("/")[1];
 
-    let newATag = linkDiv.outerHTML;
-    newATag = newATag.replace("</span>", "</a>");
-    newATag = newATag.replace("<span", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 400; ${!isDone && "color: #111"}"  `);
-    linkDiv.outerHTML = newATag;
-  }
+      let newATag = linkDiv.outerHTML;
+      newATag = newATag.replace("</span>", "</a>");
+      newATag = newATag.replace("<span", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 400; ${!isDone && "color: #111"}"  `);
+      linkDiv.outerHTML = newATag;
+    }
+  };
+
+  let subtaskLinks = document.querySelectorAll('.etask-detail'); //Lười viết config quá
+  if (subtaskLinks.length) {
+    for (let subtask of subtaskLinks) {
+      let isDone = subtask.getAttribute("data-status") === '1';;
+
+      let linkDiv = subtask.querySelector(".etask-name");
+      let taskId = subtask.getAttribute("data-id");
+
+      let newATag = linkDiv.outerHTML;
+      newATag = newATag.replace("</div>", "</a>");
+      newATag = newATag.replace("<div", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 400; ${!isDone && "color: #111"}"  `);
+      linkDiv.outerHTML = newATag;
+    };
+  };
 
 }
 
@@ -147,8 +164,6 @@ const main_smarterNoti = () => {
 
   titleDiv.appendChild(noti_grid_1);
   titleDiv.appendChild(noti_grid_2);
-  //titleDiv.appendChild(gridFilterSomething);
-  //titleDiv.appendChild(gridFilterPeople);
 
   for (let service of grid_1_items) {
     let filterServiceButton = document.createElement("button");
@@ -368,7 +383,7 @@ const utils_hookApi = () => {
     };
 
     if (xhrUrl.includes("wework.base.vn")) {
-      setTimeout(() => main_makeEverythingMiddleClickAble(), 2000);
+      setTimeout(() => main_makeWwCanHyperlink(), 2000);
     };
     if (xhrUrl.includes("/ajax/task/display")) { // Page task WW
 
@@ -379,12 +394,13 @@ const utils_hookApi = () => {
   };
 }
 
-
-
+if (currentUrl.includes("wework")) {
+  main_makeWwCanHyperlink();
+  main_smarterTaskTime();
+}
 
 main_smarterNoti();
-main_smarterTaskTime();
-main_makeEverythingMiddleClickAble();
+
 // main_styling();
 
 utils_getUserConfig();

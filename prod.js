@@ -257,9 +257,6 @@ const utils_loadMoreNoti = ({ num = 10, isFirstTime = false }) => {
       clearInterval(intervalCheckNotiAppear);
     }
   }, 200);
-
-
-
 }
 
 
