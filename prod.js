@@ -1,12 +1,12 @@
 console.log("=======Hello from duclh - SWD=======")
-const version = '0.2.5';
+const version = '0.2.7';
 const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.6
+// @version      0.2.7
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -15,10 +15,14 @@ const env = 'prod';
 // ==/UserScript==
 // Repo URL https://greasyfork.org/en/scripts/446802-smarter-base-vn
 
-const CONFIG = {
+let currentUrl = window.location.href;
+let CONFIG = {
   SERVICE: {
     "all": {
       BG_COLOR: "#ccc7c7"
+    },
+    "+5": {
+      BG_COLOR: "rgb(66 184 20 / 80%)"
     },
     "wework": {
       TITLE_SELECTOR: "#js-task-display > div.main-body > div.section.js-task-main > div.task-main > div.edit-box.compact.edit-task-name > div.edit-display > h1",
@@ -57,37 +61,77 @@ const CONFIG = {
   }
 };
 
+let notiCountIntial = {
+  "all": 0,
+  "wework": 0,
+  "meeting": 0,
+  "request": 0,
+  "workflow": 0,
+  "office": 0,
+  "hiring": 0
+};
+let notiCount = { ...notiCountIntial };
+let noti_grid_1 = document.createElement("div");
+noti_grid_1.style.display = "inline-block";
+noti_grid_1.style.borderRight = "2px ridge grey";
+noti_grid_1.style.paddingRight = "5px";
 
-const main_makeEverythingMiddleClickAble = () => {
+let noti_grid_2 = document.createElement("div");
+noti_grid_2.style.display = "inline-block";
+noti_grid_2.style.marginLeft = "5px";
+// noti_grid_2.style.borderRight = "2px ridge grey";
+
+const main_styling = () => {
+  // let loadingDiv = document.querySelector('#base-xs');
+  // let noNeedLoading = setInterval(() => {
+  //   if (loadingDiv.style.display === '') loadingDiv.style.display = "none";
+  //   clearInterval(noNeedLoading);
+  // }, 50)
+
+};
+
+const main_makeWwCanHyperlink = () => {
   let taskUrl = "https://wework.base.vn" + window.location.pathname + "?task=";
-  let currentService = utils_getCurrentService();
   let links = document.querySelectorAll(CONFIG.SERVICE.wework.LINK_SELECTOR);
 
-  for (let link of links) {
-    let linkDiv = link.querySelector(".mn .url");
-    if (!linkDiv) continue;
+  if (links.length) {
+    for (let link of links) {
+      let linkDiv = link.querySelector(".mn .url");
+      if (!linkDiv) continue;
 
-    let isDone = link.querySelector(".check.url") && link.querySelector(".check.url").innerHTML.includes("-done");
-    let taskId = linkDiv.getAttribute("data-url");
-    if (!taskId || taskId === "") continue;
-    taskId = taskId.split("/")[1];
+      let isDone = link.querySelector(".check.url") && link.querySelector(".check.url").innerHTML.includes("-done");
+      let taskId = linkDiv.getAttribute("data-url");
+      if (!taskId || taskId === "") continue;
+      taskId = taskId.split("/")[1];
 
-    let newATag = linkDiv.outerHTML;
-    newATag = newATag.replace("</span>", "</a>");
-    newATag = newATag.replace("<span", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 400; ${!isDone && "color: #111"}"  `);
-    linkDiv.outerHTML = newATag;
-  }
+      let newATag = linkDiv.outerHTML;
+      newATag = newATag.replace("</span>", "</a>");
+      newATag = newATag.replace("<span", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 400; ${!isDone && "color: #111"}"  `);
+      linkDiv.outerHTML = newATag;
+    }
+  };
+
+  let subtaskLinks = document.querySelectorAll('.etask-detail'); //Lười viết config quá
+  if (subtaskLinks.length) {
+    for (let subtask of subtaskLinks) {
+      let isDone = subtask.getAttribute("data-status") === '1';;
+
+      let linkDiv = subtask.querySelector(".etask-name");
+      let taskId = subtask.getAttribute("data-id");
+
+      let newATag = linkDiv.outerHTML;
+      newATag = newATag.replace("</div>", "</a>");
+      newATag = newATag.replace("<div", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 400; ${!isDone && "color: #111"}"  `);
+      linkDiv.outerHTML = newATag;
+    };
+  };
 
 }
-
-const main_smarterThings = () => {
-  //  document.querySelector(CONFIG.THEME.MASK_SELECTOR).setAttribute("onclick","TaskDisplay.close();");
-}
-
 
 const main_smarterNoti = () => {
+  addAction_onClickNoti();
   utils_stylingFilterBar();
-  utils_loadMoreNoti({ num: CONFIG.NOTI.LOAD_MORE_NUMBER, isFirstTime: true });
+  // utils_loadMoreNoti({ num: CONFIG.NOTI.LOAD_MORE_NUMBER, isFirstTime: true });
 
   const all = () => utils_showNotiByService("all");
 
@@ -98,7 +142,9 @@ const main_smarterNoti = () => {
   const hir = () => utils_showNotiByService("hiring");
   const mt = () => utils_showNotiByService("meeting");
 
-  const serviceToShow = [
+  const plus5 = () => utils_loadMoreNoti({ num: 5, isFirstTime: false });
+
+  const grid_1_items = [
     ["all", all],
     ["wework", ww],
     ["request", rq],
@@ -107,32 +153,39 @@ const main_smarterNoti = () => {
     ["hiring", hir],
     ["meeting", mt],
   ];
+
+  const grid_2_items = [
+    ["+5", plus5],
+  ];
   let titleDiv = document.querySelector("#base-notis > div.list.list-notis > div.-title");
   if (!titleDiv) return;
   titleDiv.innerHTML = "";
 
-  let gridFilterService = document.createElement("div");
-  gridFilterService.style.display = "inline-block";
-  gridFilterService.style.borderRight = "2px ridge grey";
 
-  let gridFilterSomething = document.createElement("div");
-  gridFilterSomething.style.display = "inline-block";
+  titleDiv.appendChild(noti_grid_1);
+  titleDiv.appendChild(noti_grid_2);
 
-  let gridFilterPeople = document.createElement("div");
-  gridFilterPeople.style.display = "inline-block";
-
-  titleDiv.appendChild(gridFilterService);
-  //titleDiv.appendChild(gridFilterSomething);
-  //titleDiv.appendChild(gridFilterPeople);
-
-  for (let service of serviceToShow) {
+  for (let service of grid_1_items) {
     let filterServiceButton = document.createElement("button");
-    filterServiceButton.innerText = service[0];
+    filterServiceButton.classList.add("filter-service");
+    filterServiceButton.classList.add(`s-${service[0]}`);
+    filterServiceButton.innerText = `${service[0]}`;
     filterServiceButton.onclick = service[1];
     filterServiceButton.style.backgroundColor = CONFIG.SERVICE[service[0]].BG_COLOR;
     utils_stylingFilterButton(filterServiceButton);
-    if (titleDiv) gridFilterService.appendChild(filterServiceButton);
+    if (titleDiv) noti_grid_1.appendChild(filterServiceButton);
   }
+
+  for (let service_2 of grid_2_items) {
+    let btn = document.createElement("button");
+    btn.innerText = `+5 trang (Ấn nhẹ tay thôi nhé, nhiều quá lag)`;
+    // btn.innerText = `${service_2[0]}`;
+    btn.onclick = service_2[1];
+    btn.style.backgroundColor = CONFIG.SERVICE[service_2[0]].BG_COLOR;
+    utils_stylingFilterButton(btn);
+    if (titleDiv) noti_grid_2.appendChild(btn);
+  }
+
 
 }
 
@@ -198,21 +251,60 @@ const utils_showNotiByService = (selectedService, filter = {}) => {
     if (selectedService === "all") continue;
     let currentService = utils_getCurrentService();
     if (!noti) continue;
-    let notiService = "";
+    let notiService = currentService;
     let url = noti.getAttributeNode("data-url").value;
     if (url.includes("https")) {
       url = url.split(".");
       notiService = url[0].replace("https://", "")
-    } else {
-      notiService = currentService;
     }
     if (
       (notiService !== selectedService)
       || noti.getElementsByClassName("-title")[0].innerHTML.includes("sinh nhật")
-
     ) {
       noti = noti.classList.add("hidden");
     };
+  }
+}
+
+const addAction_onClickNoti = () => {
+  let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR);
+  let intervalCheckNotiAppear = setInterval(() => {
+    if (openNotiButton) {
+      openNotiButton.addEventListener('click', noti_recountNoti);
+      clearInterval(intervalCheckNotiAppear);
+    }
+  }, 200);
+}
+
+const noti_recountNoti = () => {
+  notiCount = { ...notiCountIntial };
+  setTimeout(() => {
+    let notis = document.getElementsByClassName("notis");
+    let currentService = utils_getCurrentService();
+    for (let noti of notis) {
+      notiCount['all'] += 1;
+      let notiService = currentService;
+      let url = noti.getAttributeNode("data-url").value;
+      if (url.includes("https")) {
+        url = url.split(".");
+        notiService = url[0].replace("https://", "")
+      };
+      if (!CONFIG.SERVICE[notiService]) continue;
+      // if (!CONFIG.SERVICE[notiService].notiCount) CONFIG.SERVICE[notiService].notiCount = 0;
+      notiCount[notiService] += 1;
+    };
+    utils_rewriteNotiCountToButton();
+  }, 1000);
+}
+
+const utils_rewriteNotiCountToButton = () => {
+  console.log(notiCount)
+  let openNotiButton = document.querySelectorAll(".filter-service");
+  for (let btn of openNotiButton) {
+    let serviceName = btn.classList[1];
+    if (serviceName) serviceName = serviceName.split('s-')[1];
+    let serviceNotiCount = notiCount[serviceName] || 0;
+    btn.innerText = `${serviceNotiCount} - ${serviceName}`;
   }
 }
 
@@ -236,32 +328,23 @@ const utils_stylingFilterButton = (filterServiceButton) => {
 }
 
 const utils_loadMoreNoti = ({ num = 10, isFirstTime = false }) => {
-  let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR);
   let loadMoreButton = document.querySelector(CONFIG.NOTI.LOAD_MORE_SELECTOR);
 
-
-  const triggerLoadMore = () => {
-    let count = 0;
-    let intervalClickLoadMore = setInterval(() => {
-      console.log("Noti open num", count);
-      if (count === num) clearInterval(intervalClickLoadMore);
-      loadMoreButton.click();
-      count += 1;
-    }, 200);
-    if (isFirstTime) openNotiButton.removeEventListener('click', triggerLoadMore);
-  };
-
-  let intervalCheckNotiAppear = setInterval(() => {
-    if (openNotiButton) {
-      openNotiButton.addEventListener('click', triggerLoadMore);
-      clearInterval(intervalCheckNotiAppear);
+  let count = 0;
+  let intervalClickLoadMore = setInterval(() => {
+    console.log("Noti open num", count);
+    if (count === num) {
+      clearInterval(intervalClickLoadMore);
+      noti_recountNoti()
     }
+    loadMoreButton.click();
+    count += 1;
   }, 200);
+
 }
 
 
 const utils_getUserConfig = () => {
-  //const pingUrl = 'https://eokn9pa90k2ue1z.m.pipedream.net';
   const pingUrl = 'https://script.google.com/macros/s/AKfycbwq3EpWpIY4zpebj3svXRsenyr_2kSTZvNuArOj5plyQE0Mp4EXVoGa4v4fmhwU4QkAkg/exec';
   let userInfo = JSON.parse(localStorage.getItem('ajs_user_traits'));
   userInfo = {
@@ -269,7 +352,6 @@ const utils_getUserConfig = () => {
     email: userInfo.email,
     version,
     env
-    //product_id: userInfo.product_id
   }
 
   fetch(pingUrl, {
@@ -301,7 +383,7 @@ const utils_hookApi = () => {
     };
 
     if (xhrUrl.includes("wework.base.vn")) {
-      setTimeout(() => main_makeEverythingMiddleClickAble(), 2000);
+      setTimeout(() => main_makeWwCanHyperlink(), 2000);
     };
     if (xhrUrl.includes("/ajax/task/display")) { // Page task WW
 
@@ -312,13 +394,14 @@ const utils_hookApi = () => {
   };
 }
 
+if (currentUrl.includes("wework")) {
+  main_makeWwCanHyperlink();
+  main_smarterTaskTime();
+}
 
-
-
-main_smarterThings();
 main_smarterNoti();
-main_smarterTaskTime();
-main_makeEverythingMiddleClickAble();
+
+// main_styling();
 
 utils_getUserConfig();
 utils_hookApi();
