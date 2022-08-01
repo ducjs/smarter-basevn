@@ -352,7 +352,8 @@ const utils_getUserConfig = () => {
     email: userInfo.email,
     version,
     env
-  }
+  };
+  if (userInfo.email === "duclh@gearvn.com") return;
 
   fetch(pingUrl, {
     method: 'POST',
