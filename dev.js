@@ -1,5 +1,5 @@
 console.log("=======Hello from duclh - SWD=======")
-const version = '0.2.7';
+const version = '0.2.7.2';
 const env = 'dev';
 
 // ==UserScript==
@@ -323,6 +323,7 @@ const utils_rewriteNotiCountToButton = () => {
 
 const utils_stylingFilterBar = () => {
   let titleNoti = document.querySelector(".-title");
+  document.querySelector(".list-notis").style.width = "60%";
   if (titleNoti) {
     titleNoti.style.width = "300%";
     titleNoti.style.height = "55px";
