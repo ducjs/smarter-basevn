@@ -17,6 +17,7 @@ const env = 'dev';
 
 let currentUrl = window.location.href;
 let CONFIG = {
+  CURRENT_SELECT_NOTI_SERVICE: "",
   SERVICE: {
     "all": {
       BG_COLOR: "#ccc7c7"
@@ -53,7 +54,16 @@ let CONFIG = {
   HIDE_NOTI: [],
   NOTI: {
     LOAD_MORE_NUMBER: 2,
-    OPEN_NOTI_SELECTOR: "#navigator > div.header > div.icon",
+    OPEN_NOTI_SELECTOR: {
+      "wework": "#navigator > div.header > div.icon",
+      "meeting": "#base-panel > div > div.item.url.item-followup.item-notis",
+      "request": "#base-panel-hoz > div.items > div.item.item-notis",
+      "workflow": "#navigator > div.icons.clear-fix > div:nth-child(3)",
+      "office": "#header > div > div.header-side > div.header-item.item-notis.url",
+      "inside": "#header > div > div.header-side > div.header-item.item-notis.-std.url",
+      "hiring": "",
+    },
+
     LOAD_MORE_SELECTOR: ".-more"
   },
   THEME: {
@@ -169,7 +179,7 @@ const main_smarterNoti = () => {
     let filterServiceButton = document.createElement("button");
     filterServiceButton.classList.add("filter-service");
     filterServiceButton.classList.add(`s-${service[0]}`);
-    filterServiceButton.innerText = `${service[0]}`;
+    filterServiceButton.innerText = `0 - ${service[0]}`;
     filterServiceButton.onclick = service[1];
     filterServiceButton.style.backgroundColor = CONFIG.SERVICE[service[0]].BG_COLOR;
     utils_stylingFilterButton(filterServiceButton);
@@ -178,7 +188,8 @@ const main_smarterNoti = () => {
 
   for (let service_2 of grid_2_items) {
     let btn = document.createElement("button");
-    btn.innerText = `+5 trang (Ấn nhẹ tay thôi nhé, nhiều quá lag)`;
+    btn.innerText = `+5 trang`;
+    btn.classList.add("load-more-noti");
     // btn.innerText = `${service_2[0]}`;
     btn.onclick = service_2[1];
     btn.style.backgroundColor = CONFIG.SERVICE[service_2[0]].BG_COLOR;
@@ -245,6 +256,7 @@ const utils_getCurrentService = () => {
 
 
 const utils_showNotiByService = (selectedService, filter = {}) => {
+  CONFIG.CURRENT_SELECT_NOTI_SERVICE = selectedService;
   let notis = document.getElementsByClassName("notis");
   for (let noti of notis) {
     noti.classList.remove("hidden");
@@ -267,7 +279,9 @@ const utils_showNotiByService = (selectedService, filter = {}) => {
 }
 
 const addAction_onClickNoti = () => {
-  let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR);
+  let currentService = utils_getCurrentService();
+  if (!CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]) return;
+  let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]);
   let intervalCheckNotiAppear = setInterval(() => {
     if (openNotiButton) {
       openNotiButton.addEventListener('click', noti_recountNoti);
@@ -276,7 +290,7 @@ const addAction_onClickNoti = () => {
   }, 200);
 }
 
-const noti_recountNoti = () => {
+const noti_recountNoti = (reclickService = false) => {
   notiCount = { ...notiCountIntial };
   setTimeout(() => {
     let notis = document.getElementsByClassName("notis");
@@ -290,7 +304,6 @@ const noti_recountNoti = () => {
         notiService = url[0].replace("https://", "")
       };
       if (!CONFIG.SERVICE[notiService]) continue;
-      // if (!CONFIG.SERVICE[notiService].notiCount) CONFIG.SERVICE[notiService].notiCount = 0;
       notiCount[notiService] += 1;
     };
     utils_rewriteNotiCountToButton();
@@ -329,18 +342,26 @@ const utils_stylingFilterButton = (filterServiceButton) => {
 
 const utils_loadMoreNoti = ({ num = 10, isFirstTime = false }) => {
   let loadMoreButton = document.querySelector(CONFIG.NOTI.LOAD_MORE_SELECTOR);
-
+  utils_toogleElemByClass({ classname: ".load-more-noti", isDisable: true });
   let count = 0;
   let intervalClickLoadMore = setInterval(() => {
     console.log("Noti open num", count);
     if (count === num) {
       clearInterval(intervalClickLoadMore);
-      noti_recountNoti()
+      noti_recountNoti();
+      utils_toogleElemByClass({ classname: ".load-more-noti", isDisable: false });
+
     }
     loadMoreButton.click();
     count += 1;
   }, 200);
 
+}
+
+const utils_toogleElemByClass = ({ classname = "", isDisable = false }) => {
+  let divs = document.querySelectorAll(classname);
+  if (isDisable) divs.forEach(e => e.setAttribute("disabled", true));
+  else divs.forEach(e => e.removeAttribute("disabled"));
 }
 
 
