@@ -1,12 +1,12 @@
 console.log("=======Hello from duclh - SWD=======")
-const version = '0.2.7.3';
+const version = '0.2.7.4';
 const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.7.3
+// @version      0.2.7.4
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -233,9 +233,13 @@ const main_smarterTaskTime = () => {
 
 }
 
+
 const main_smarterTitle = () => {
   let oldTitle = "";
   let hostName = utils_getCurrentService();
+
+  let hasServiceCfg = CONFIG.SERVICE[hostName];
+  if (!hasServiceCfg) return;
 
   let newTitle = document.querySelector(CONFIG.SERVICE[hostName].TITLE_SELECTOR);
   if (newTitle && newTitle !== oldTitle) {
@@ -245,6 +249,55 @@ const main_smarterTitle = () => {
 
 }
 
+
+const main_smarterLink = () => {
+  let hostName = utils_getCurrentService();
+
+  let hasServiceCfg = CONFIG.SERVICE[hostName];
+  if (!hasServiceCfg) return;
+
+  let taskId = document.querySelector("#js-task-display").getAttribute("data-id");
+  let title = document.querySelector(CONFIG.SERVICE[hostName].TITLE_SELECTOR);
+  title = title.innerHTML.replace(/ /g, '-');
+  title = removeVietnameseTones(title);
+  let checkHasSearch = setInterval(() => {
+    if (window.location.search && window.location.search.includes("task=")) {
+      clearInterval(checkHasSearch);
+      let newUrl = "/?n=" + title + "&task=" + taskId
+      // +  window.location.pathname.replace("/");
+      history.replaceState(null, '', newUrl);
+    };
+  }, 200);
+
+}
+
+const removeVietnameseTones = (str) => {
+  str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
+  str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
+  str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
+  str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
+  str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
+  str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
+  str = str.replace(/đ/g, "d");
+  str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
+  str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
+  str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
+  str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
+  str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
+  str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
+  str = str.replace(/Đ/g, "D");
+  // Some system encode vietnamese combining accent as individual utf-8 characters
+  // Một vài bộ encode coi các dấu mũ, dấu chữ như một kí tự riêng biệt nên thêm hai dòng này
+  str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, ""); // ̀ ́ ̃ ̉ ̣  huyền, sắc, ngã, hỏi, nặng
+  str = str.replace(/\u02C6|\u0306|\u031B/g, ""); // ˆ ̆ ̛  Â, Ê, Ă, Ơ, Ư
+  // Remove extra spaces
+  // Bỏ các khoảng trắng liền nhau
+  str = str.trim();
+  // Remove punctuations
+  // Bỏ dấu câu, kí tự đặc biệt
+  // str = str.replace(/!|@|%|\^|\*|\(|\)|\+|\=|\<|\>|\?|\/|,|\.|\:|\;|\'|\"|\&|\#|\[|\]|~|\$|_|`|-|{|}|\||\\/g, " ");
+  return str;
+}
 
 const utils_getCurrentService = () => {
   let hostName = window.location.hostname;
@@ -400,6 +453,8 @@ const utils_hookApi = () => {
 
     if (xhrUrl.includes("/ajax/api/comment/load")) {
       main_smarterTitle();
+      main_smarterLink();
+
     };
     if (xhrUrl.includes("/ajax/api/activity")) {
       // main_hyperlinkTask();
@@ -423,7 +478,6 @@ if (currentUrl.includes("wework")) {
 }
 
 main_smarterNoti();
-
 // main_styling();
 
 utils_getUserConfig();
