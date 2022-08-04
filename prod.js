@@ -1,12 +1,12 @@
 console.log("=======Hello from duclh - SWD=======")
-const version = '0.2.7.2';
+const version = '0.2.7.3';
 const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.7.2
+// @version      0.2.7.3
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -131,7 +131,7 @@ const main_makeWwCanHyperlink = () => {
 
       let newATag = linkDiv.outerHTML;
       newATag = newATag.replace("</div>", "</a>");
-      newATag = newATag.replace("<div", `<a href="${taskUrl + taskId}" onClick="return false;" style="font-weight: 400; ${!isDone && "color: #111"}"  `);
+      newATag = newATag.replace("<div", `<a href="${taskUrl + taskId}"  onclick='Base.task._showID("${taskId}", "", "undefined");return false;' style="font-weight: 400; ${!isDone && "color: #111"}"  `);
       linkDiv.outerHTML = newATag;
     };
   };
