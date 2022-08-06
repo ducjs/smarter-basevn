@@ -1,12 +1,12 @@
-console.log("=======Hello from duclh - SWD=======")
-const version = '0.2.7.4';
+console.log("=======FROM SWD WITH CODE=======")
+const version = '0.2.8';
 const env = 'dev';
 
 // ==UserScript==
 // @name         Smarter Base.vn - DEV
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.7.4
+// @version      0.2.8
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -63,11 +63,18 @@ let CONFIG = {
       "inside": "#header > div > div.header-side > div.header-item.item-notis.-std.url",
       "hiring": "",
     },
-
     LOAD_MORE_SELECTOR: ".-more"
   },
   THEME: {
     MASK_SELECTOR: "#apdialogs"
+  },
+  ENABLE_SERVICES: {
+    "disableAll": false,
+    "smarterTitle": false,
+    "smarterUrl": false,
+    "smarterNoti": false,
+    "wwHyperlink": false,
+    "smarterTaskTime": false
   }
 };
 
@@ -89,7 +96,6 @@ noti_grid_1.style.paddingRight = "5px";
 let noti_grid_2 = document.createElement("div");
 noti_grid_2.style.display = "inline-block";
 noti_grid_2.style.marginLeft = "5px";
-// noti_grid_2.style.borderRight = "2px ridge grey";
 
 const main_styling = () => {
   // let loadingDiv = document.querySelector('#base-xs');
@@ -141,10 +147,8 @@ const main_makeWwCanHyperlink = () => {
 const main_smarterNoti = () => {
   addAction_onClickNoti();
   utils_stylingFilterBar();
-  // utils_loadMoreNoti({ num: CONFIG.NOTI.LOAD_MORE_NUMBER, isFirstTime: true });
 
   const all = () => utils_showNotiByService("all");
-
   const ww = () => utils_showNotiByService("wework");
   const rq = () => utils_showNotiByService("request");
   const wf = () => utils_showNotiByService("workflow");
@@ -167,11 +171,10 @@ const main_smarterNoti = () => {
   const grid_2_items = [
     ["+5", plus5],
   ];
+
   let titleDiv = document.querySelector("#base-notis > div.list.list-notis > div.-title");
   if (!titleDiv) return;
   titleDiv.innerHTML = "";
-
-
   titleDiv.appendChild(noti_grid_1);
   titleDiv.appendChild(noti_grid_2);
 
@@ -200,40 +203,6 @@ const main_smarterNoti = () => {
 
 }
 
-const main_smarterTaskTime = () => {
-  // Hiện chỉ hỗ trợ dạng gantt > trường tuỳ chỉnh
-  let taskTds = document.querySelectorAll("#board-table .task");
-  for (let i = 0; i < taskTds.length; i++) {
-    let dateDivs = taskTds[i].querySelectorAll(".task-time");
-    let deadlineDiv = dateDivs[1];
-    if (deadlineDiv && deadlineDiv.innerHTML !== "") {
-      let deadlineDate = deadlineDiv.innerHTML;
-      deadlineDate = deadlineDate.split("/");
-      deadlineDate = `${deadlineDate[1]}/${deadlineDate[0]}/2022`;
-      deadlineDate = new Date(deadlineDate);
-      let deltaDays = (deadlineDate.getTime() - Date.now()) / (1000 * 3600 * 24);
-      // const formatter = new Intl.RelativeTimeFormat();
-      // let remainDaysText = formatter.format(Math.round(deltaDays), 'days');
-
-      deltaDays = Math.round(deltaDays) + 1;
-      let completedDiv = dateDivs[2];
-      if (deltaDays >= 0 && deltaDays < 4) completedDiv.style = "color: red";
-      switch (deltaDays) {
-        case 0:
-          completedDiv.innerHTML = `0d`;
-          break;
-        default: completedDiv.innerHTML = `${deltaDays}d`;
-      }
-
-    }
-
-
-  }
-
-
-}
-
-
 const main_smarterTitle = () => {
   let oldTitle = "";
   let hostName = utils_getCurrentService();
@@ -250,16 +219,16 @@ const main_smarterTitle = () => {
 }
 
 
-const main_smarterLink = () => {
+const main_smarterUrl = () => {
   let hostName = utils_getCurrentService();
-
   let hasServiceCfg = CONFIG.SERVICE[hostName];
   if (!hasServiceCfg) return;
 
   let taskId = document.querySelector("#js-task-display").getAttribute("data-id");
   let title = document.querySelector(CONFIG.SERVICE[hostName].TITLE_SELECTOR);
   title = title.innerHTML.replace(/ /g, '-');
-  title = removeVietnameseTones(title);
+  title = utils_removeVietnameseTones(title);
+
   let checkHasSearch = setInterval(() => {
     if (window.location.search && window.location.search.includes("task=")) {
       clearInterval(checkHasSearch);
@@ -271,7 +240,7 @@ const main_smarterLink = () => {
 
 }
 
-const removeVietnameseTones = (str) => {
+const utils_removeVietnameseTones = (str) => {
   str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
   str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
   str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
@@ -304,9 +273,6 @@ const utils_getCurrentService = () => {
   hostName = hostName.split(".")[0];
   return hostName;
 }
-
-
-
 
 const utils_showNotiByService = (selectedService, filter = {}) => {
   CONFIG.CURRENT_SELECT_NOTI_SERVICE = selectedService;
@@ -419,7 +385,7 @@ const utils_toogleElemByClass = ({ classname = "", isDisable = false }) => {
 }
 
 
-const utils_getUserConfig = () => {
+const utils_getUserConfig = async () => {
   const pingUrl = 'https://script.google.com/macros/s/AKfycbwq3EpWpIY4zpebj3svXRsenyr_2kSTZvNuArOj5plyQE0Mp4EXVoGa4v4fmhwU4QkAkg/exec';
   let userInfo = JSON.parse(localStorage.getItem('ajs_user_traits'));
   userInfo = {
@@ -428,57 +394,57 @@ const utils_getUserConfig = () => {
     version,
     env
   };
-  if (userInfo.email === "duclh@gearvn.com") return;
 
-  fetch(pingUrl, {
+  let cfg = await fetch(pingUrl, {
     method: 'POST',
     redirect: "follow",
     body: JSON.stringify(userInfo),
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8',
-    }
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
   })
-    .then(response => response.json())
-    .then(data => {
-      console.log(data)
-    });
+  return cfg.json();
 }
 
+
+const config_load = async () => {
+  let cfg = await utils_getUserConfig();
+  cfg = cfg.data.config;
+  CONFIG.ENABLE_SERVICES = cfg;
+  if (cfg.disableAll) return;
+
+  if (cfg.smarterNoti) main_smarterNoti();
+  if (cfg.smarterTitle) main_smarterTitle();
+  if (currentUrl.includes("wework")) {
+    if (cfg.wwHyperlink) main_makeWwCanHyperlink();
+  };
+}
+config_load();
 
 const utils_hookApi = () => {
   let proxied = window.XMLHttpRequest.prototype.open;
   window.XMLHttpRequest.prototype.open = function () {
+    let cfg = CONFIG.ENABLE_SERVICES;
+    if (cfg.disableAll) return;
+
     let xhrUrl = arguments[1];
-    console.log("==============CATCH API ", arguments);
+    // console.log("==============CATCH API ", arguments);
+    console.log(cfg)
 
     if (xhrUrl.includes("/ajax/api/comment/load")) {
-      main_smarterTitle();
-      main_smarterLink();
-
+      if (cfg.smarterTitle) main_smarterTitle();
+      if (cfg.smarterUrl) main_smarterUrl();
     };
+
     if (xhrUrl.includes("/ajax/api/activity")) {
-      // main_hyperlinkTask();
+      //  main_hyperlinkTask();
     };
 
     if (xhrUrl.includes("wework.base.vn")) {
-      setTimeout(() => main_makeWwCanHyperlink(), 2000);
+      setTimeout(() => { if (cfg.wwHyperlink) main_makeWwCanHyperlink() }, 2000);
     };
     if (xhrUrl.includes("/ajax/task/display")) { // Page task WW
 
     };
-
-
     return proxied.apply(this, [].slice.call(arguments));
   };
 }
-
-if (currentUrl.includes("wework")) {
-  main_makeWwCanHyperlink();
-  main_smarterTaskTime();
-}
-
-main_smarterNoti();
-// main_styling();
-
-utils_getUserConfig();
 utils_hookApi();
