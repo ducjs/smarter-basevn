@@ -1,12 +1,12 @@
 console.log("=======Hello from duclh - SWD=======")
-const version = '0.2.7.4';
+const version = '0.2.7.5';
 const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.7.4
+// @version      0.2.7.5
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -453,7 +453,7 @@ const utils_hookApi = () => {
 
     if (xhrUrl.includes("/ajax/api/comment/load")) {
       main_smarterTitle();
-      main_smarterLink();
+      // main_smarterLink();
 
     };
     if (xhrUrl.includes("/ajax/api/activity")) {
