@@ -406,8 +406,11 @@ const utils_getUserConfig = async () => {
 
 
 const config_load = async () => {
-  let cfg = await utils_getUserConfig();
-  cfg = cfg.data.config;
+  let cfg = CONFIG.ENABLE_SERVICES; // Default
+  let localCfg = localStorage.getItem("sb_config");
+  if (!localCfg || localCfg.disableAll === null) { // If no, call API get cfg
+    cfg = await utils_getUserConfig();
+    cfg = cfg.data.config;
   CONFIG.ENABLE_SERVICES = cfg;
   if (cfg.disableAll) return;
 
