@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.8';
+const version = '0.2.8.1';
 const env = 'dev';
 
 // ==UserScript==
 // @name         Smarter Base.vn - DEV
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8
+// @version      0.2.8.1
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -330,13 +330,14 @@ const noti_recountNoti = (reclickService = false) => {
 }
 
 const utils_rewriteNotiCountToButton = () => {
-  console.log(notiCount)
   let openNotiButton = document.querySelectorAll(".filter-service");
   for (let btn of openNotiButton) {
     let serviceName = btn.classList[1];
     if (serviceName) serviceName = serviceName.split('s-')[1];
     let serviceNotiCount = notiCount[serviceName] || 0;
     btn.innerText = `${serviceNotiCount} - ${serviceName}`;
+    if (serviceNotiCount === 0) btn.setAttribute("disabled", true)
+    else btn.removeAttribute("disabled");
   }
 }
 
