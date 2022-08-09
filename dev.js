@@ -411,6 +411,11 @@ const config_load = async () => {
   if (!localCfg || localCfg.disableAll === null) { // If no, call API get cfg
     cfg = await utils_getUserConfig();
     cfg = cfg.data.config;
+    localStorage.setItem("sb_config", JSON.stringify(cfg));
+  } else {
+    cfg = { ...JSON.parse(localCfg) };
+  }
+
   CONFIG.ENABLE_SERVICES = cfg;
   if (cfg.disableAll) return;
 
