@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.8.1';
+const version = '0.2.8.2';
 const env = 'dev';
 
 // ==UserScript==
 // @name         Smarter Base.vn - DEV
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8.1
+// @version      0.2.8.2
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -88,6 +88,9 @@ let notiCountIntial = {
   "hiring": 0
 };
 let notiCount = { ...notiCountIntial };
+let notiOpened = false;
+let firstTimeOpenNoti = true;
+
 let noti_grid_1 = document.createElement("div");
 noti_grid_1.style.display = "inline-block";
 noti_grid_1.style.borderRight = "2px ridge grey";
@@ -215,7 +218,6 @@ const main_smarterTitle = () => {
     oldTitle = newTitle;
     document.title = newTitle.innerHTML;
   }
-
 }
 
 
@@ -301,13 +303,33 @@ const addAction_onClickNoti = () => {
   let currentService = utils_getCurrentService();
   if (!CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]) return;
   let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]);
+
   let intervalCheckNotiAppear = setInterval(() => {
     if (openNotiButton) {
-      openNotiButton.addEventListener('click', noti_recountNoti);
+      openNotiButton.addEventListener('click', () => {
+        if (firstTimeOpenNoti) {
+          noti_recountNoti();
+          firstTimeOpenNoti = !firstTimeOpenNoti;
+        }
+        document.querySelector("#base-notis").style.display = notiOpened ? "none" : "block";
+        document.querySelector("#base-notis > div.full-mask").addEventListener("click", () => notiOpened = false);
+        notiOpened = !notiOpened;
+
+      })
       clearInterval(intervalCheckNotiAppear);
     }
   }, 200);
 }
+
+const noti_openNow = () => {
+  let openStatus = notiOpened;
+  let currentService = utils_getCurrentService();
+  if (!CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]) return;
+  let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]);
+  openNotiButton.onclick = 'Base.toggle("notis");';
+
+};
+// noti_openNow();
 
 const noti_recountNoti = (reclickService = false) => {
   notiCount = { ...notiCountIntial };
@@ -343,7 +365,8 @@ const utils_rewriteNotiCountToButton = () => {
 
 const utils_stylingFilterBar = () => {
   let titleNoti = document.querySelector(".-title");
-  document.querySelector(".list-notis").style.width = "60%";
+  let listNoti = document.querySelector(".list-notis");
+  if (listNoti) listNoti.style.width = "60%";
   if (titleNoti) {
     titleNoti.style.width = "300%";
     titleNoti.style.height = "55px";
@@ -426,7 +449,6 @@ const config_load = async () => {
     if (cfg.wwHyperlink) main_makeWwCanHyperlink();
   };
 }
-config_load();
 
 const utils_hookApi = () => {
   let proxied = window.XMLHttpRequest.prototype.open;
@@ -456,4 +478,3 @@ const utils_hookApi = () => {
     return proxied.apply(this, [].slice.call(arguments));
   };
 }
-utils_hookApi();
