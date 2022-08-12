@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.8';
+const version = '0.2.8.1';
 const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8
+// @version      0.2.8.1
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -330,13 +330,14 @@ const noti_recountNoti = (reclickService = false) => {
 }
 
 const utils_rewriteNotiCountToButton = () => {
-  console.log(notiCount)
   let openNotiButton = document.querySelectorAll(".filter-service");
   for (let btn of openNotiButton) {
     let serviceName = btn.classList[1];
     if (serviceName) serviceName = serviceName.split('s-')[1];
     let serviceNotiCount = notiCount[serviceName] || 0;
     btn.innerText = `${serviceNotiCount} - ${serviceName}`;
+    if (serviceNotiCount === 0) btn.setAttribute("disabled", true)
+    else btn.removeAttribute("disabled");
   }
 }
 
@@ -406,8 +407,16 @@ const utils_getUserConfig = async () => {
 
 
 const config_load = async () => {
-  let cfg = await utils_getUserConfig();
-  cfg = cfg.data.config;
+  let cfg = CONFIG.ENABLE_SERVICES; // Default
+  let localCfg = localStorage.getItem("sb_config");
+  if (!localCfg || localCfg.disableAll === null) { // If no, call API get cfg
+    cfg = await utils_getUserConfig();
+    cfg = cfg.data.config;
+    localStorage.setItem("sb_config", JSON.stringify(cfg));
+  } else {
+    cfg = { ...JSON.parse(localCfg) };
+  }
+
   CONFIG.ENABLE_SERVICES = cfg;
   if (cfg.disableAll) return;
 
