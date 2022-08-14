@@ -72,7 +72,11 @@ let CONFIG = {
     "disableAll": false,
     "smarterTitle": false,
     "smarterUrl": false,
+
     "smarterNoti": false,
+    "smarterNoti_faster_like_it_gone": false,
+    "smarterNoti_hide_noti": false,
+
     "wwHyperlink": false,
     "smarterTaskTime": false
   }
@@ -147,8 +151,10 @@ const main_makeWwCanHyperlink = () => {
 
 }
 
-const main_smarterNoti = () => {
-  addAction_onClickNoti();
+const main_smarterNoti = (options = {
+  smarterNoti_faster_like_it_gone
+}) => {
+  addAction_onClickNoti(options);
   utils_stylingFilterBar();
 
   const all = () => utils_showNotiByService("all");
@@ -307,12 +313,14 @@ const addAction_onClickNoti = () => {
   let intervalCheckNotiAppear = setInterval(() => {
     if (openNotiButton) {
       openNotiButton.addEventListener('click', () => {
+        // console.log(firstTimeOpenNoti)
+        // console.log("notiopemed", notiOpened);
         if (firstTimeOpenNoti) {
           noti_recountNoti();
           firstTimeOpenNoti = !firstTimeOpenNoti;
         }
-        document.querySelector("#base-notis").style.display = notiOpened ? "none" : "block";
-        document.querySelector("#base-notis > div.full-mask").addEventListener("click", () => notiOpened = false);
+        // document.querySelector("#base-notis").style.display = notiOpened ? "none" : "block";
+        // document.querySelector("#base-notis > div.full-mask").addEventListener("click", () => notiOpened = false);
         notiOpened = !notiOpened;
 
       })
@@ -443,7 +451,11 @@ const config_load = async () => {
   CONFIG.ENABLE_SERVICES = cfg;
   if (cfg.disableAll) return;
 
-  if (cfg.smarterNoti) main_smarterNoti();
+  if (cfg.smarterNoti) {
+    main_smarterNoti({
+      smarterNoti_faster_like_it_gone: cfg.smarterNoti_faster_like_it_gone
+    })
+  };
   if (cfg.smarterTitle) main_smarterTitle();
   if (currentUrl.includes("wework")) {
     if (cfg.wwHyperlink) main_makeWwCanHyperlink();
@@ -478,3 +490,16 @@ const utils_hookApi = () => {
     return proxied.apply(this, [].slice.call(arguments));
   };
 }
+
+const sendErrorLog = () => {
+};
+
+try {
+  config_load();
+  utils_hookApi();
+} catch (error) {
+
+}
+
+
+if (document.querySelector("#audios")) document.querySelector("#audios").outerHTML = "";
