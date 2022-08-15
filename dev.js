@@ -13,7 +13,6 @@ const env = 'dev';
 // @grant        none
 // @license MIT
 // ==/UserScript==
-// Repo URL https://greasyfork.org/en/scripts/446802-smarter-base-vn
 
 let currentUrl = window.location.href;
 let CONFIG = {
@@ -62,6 +61,7 @@ let CONFIG = {
       "office": "#header > div > div.header-side > div.header-item.item-notis.url",
       "inside": "#header > div > div.header-side > div.header-item.item-notis.-std.url",
       "hiring": "",
+      "booking": ".base-notis"
     },
     LOAD_MORE_SELECTOR: ".-more"
   },
@@ -81,7 +81,9 @@ let CONFIG = {
     "smarterTaskTime": false
   }
 };
-
+let THEME_CONFIG = {
+  TIP_INIT: false
+};
 let notiCountIntial = {
   "all": 0,
   "wework": 0,
@@ -116,6 +118,10 @@ const main_styling = () => {
 const main_makeWwCanHyperlink = () => {
   let taskUrl = "https://wework.base.vn" + window.location.pathname + "?task=";
   let links = document.querySelectorAll(CONFIG.SERVICE.wework.LINK_SELECTOR);
+  if (!THEME_CONFIG.TIP_INIT) {
+    wwHyperlink_tips();
+    THEME_CONFIG.TIP_INIT = true;
+  }
 
   if (links.length) {
     for (let link of links) {
@@ -151,9 +157,31 @@ const main_makeWwCanHyperlink = () => {
 
 }
 
-const main_smarterNoti = (options = {
-  smarterNoti_faster_like_it_gone
-}) => {
+const wwHyperlink_tips = () => {
+  let clickedTip = true;
+  let iconTip = document.createElement("img");
+  iconTip.setAttribute("src", "https://cdn-icons-png.flaticon.com/512/551/551080.png");
+  iconTip.style.width = '20px';
+  iconTip.style.paddingBottom = '10px';
+  iconTip.style.paddingLeft = '5px';
+
+  let tipTextDiv = document.createElement("span");
+  tipTextDiv.innerText = "Mẹo vặt cuộc sống: Link task giờ đây có thể bấm chuột phải hoặc chuột giữa (để nhảy tab mới)";
+  tipTextDiv.style.display = 'none'
+  tipTextDiv.style.position = 'fixed';
+  tipTextDiv.style.backgroundColor = '#71e1ff';
+  tipTextDiv.style.zIndex = '999';
+
+
+  iconTip.onclick = () => {
+    tipTextDiv.style.display = clickedTip ? 'block' : 'none';
+    clickedTip = !clickedTip;
+  }
+  document.querySelector('#header > div.title > div.name').appendChild(iconTip);
+  document.querySelector('#header > div.title > div.name').appendChild(tipTextDiv);
+}
+
+const main_smarterNoti = (options) => {
   addAction_onClickNoti(options);
   utils_stylingFilterBar();
 

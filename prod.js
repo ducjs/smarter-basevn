@@ -1,19 +1,18 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.8.1';
+const version = '0.2.8.2';
 const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8.1
+// @version      0.2.8.2
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
 // @grant        none
 // @license MIT
 // ==/UserScript==
-// Repo URL https://greasyfork.org/en/scripts/446802-smarter-base-vn
 
 let currentUrl = window.location.href;
 let CONFIG = {
@@ -62,6 +61,7 @@ let CONFIG = {
       "office": "#header > div > div.header-side > div.header-item.item-notis.url",
       "inside": "#header > div > div.header-side > div.header-item.item-notis.-std.url",
       "hiring": "",
+      "booking": ".base-notis"
     },
     LOAD_MORE_SELECTOR: ".-more"
   },
@@ -72,12 +72,18 @@ let CONFIG = {
     "disableAll": false,
     "smarterTitle": false,
     "smarterUrl": false,
+
     "smarterNoti": false,
+    "smarterNoti_faster_like_it_gone": false,
+    "smarterNoti_hide_noti": false,
+
     "wwHyperlink": false,
     "smarterTaskTime": false
   }
 };
-
+let THEME_CONFIG = {
+  TIP_INIT: false
+};
 let notiCountIntial = {
   "all": 0,
   "wework": 0,
@@ -88,6 +94,9 @@ let notiCountIntial = {
   "hiring": 0
 };
 let notiCount = { ...notiCountIntial };
+let notiOpened = false;
+let firstTimeOpenNoti = true;
+
 let noti_grid_1 = document.createElement("div");
 noti_grid_1.style.display = "inline-block";
 noti_grid_1.style.borderRight = "2px ridge grey";
@@ -109,6 +118,10 @@ const main_styling = () => {
 const main_makeWwCanHyperlink = () => {
   let taskUrl = "https://wework.base.vn" + window.location.pathname + "?task=";
   let links = document.querySelectorAll(CONFIG.SERVICE.wework.LINK_SELECTOR);
+  if (!THEME_CONFIG.TIP_INIT) {
+    wwHyperlink_tips();
+    THEME_CONFIG.TIP_INIT = true;
+  }
 
   if (links.length) {
     for (let link of links) {
@@ -144,8 +157,32 @@ const main_makeWwCanHyperlink = () => {
 
 }
 
-const main_smarterNoti = () => {
-  addAction_onClickNoti();
+const wwHyperlink_tips = () => {
+  let clickedTip = true;
+  let iconTip = document.createElement("img");
+  iconTip.setAttribute("src", "https://cdn-icons-png.flaticon.com/512/551/551080.png");
+  iconTip.style.width = '20px';
+  iconTip.style.paddingBottom = '10px';
+  iconTip.style.paddingLeft = '5px';
+
+  let tipTextDiv = document.createElement("span");
+  tipTextDiv.innerText = "Mẹo vặt cuộc sống: Link task giờ đây có thể bấm chuột phải hoặc chuột giữa (để nhảy tab mới)";
+  tipTextDiv.style.display = 'none'
+  tipTextDiv.style.position = 'fixed';
+  tipTextDiv.style.backgroundColor = '#71e1ff';
+  tipTextDiv.style.zIndex = '999';
+
+
+  iconTip.onclick = () => {
+    tipTextDiv.style.display = clickedTip ? 'block' : 'none';
+    clickedTip = !clickedTip;
+  }
+  document.querySelector('#header > div.title > div.name').appendChild(iconTip);
+  document.querySelector('#header > div.title > div.name').appendChild(tipTextDiv);
+}
+
+const main_smarterNoti = (options) => {
+  addAction_onClickNoti(options);
   utils_stylingFilterBar();
 
   const all = () => utils_showNotiByService("all");
@@ -215,7 +252,6 @@ const main_smarterTitle = () => {
     oldTitle = newTitle;
     document.title = newTitle.innerHTML;
   }
-
 }
 
 
@@ -301,13 +337,35 @@ const addAction_onClickNoti = () => {
   let currentService = utils_getCurrentService();
   if (!CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]) return;
   let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]);
+
   let intervalCheckNotiAppear = setInterval(() => {
     if (openNotiButton) {
-      openNotiButton.addEventListener('click', noti_recountNoti);
+      openNotiButton.addEventListener('click', () => {
+        // console.log(firstTimeOpenNoti)
+        // console.log("notiopemed", notiOpened);
+        if (firstTimeOpenNoti) {
+          noti_recountNoti();
+          firstTimeOpenNoti = !firstTimeOpenNoti;
+        }
+        // document.querySelector("#base-notis").style.display = notiOpened ? "none" : "block";
+        // document.querySelector("#base-notis > div.full-mask").addEventListener("click", () => notiOpened = false);
+        notiOpened = !notiOpened;
+
+      })
       clearInterval(intervalCheckNotiAppear);
     }
   }, 200);
 }
+
+const noti_openNow = () => {
+  let openStatus = notiOpened;
+  let currentService = utils_getCurrentService();
+  if (!CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]) return;
+  let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]);
+  openNotiButton.onclick = 'Base.toggle("notis");';
+
+};
+// noti_openNow();
 
 const noti_recountNoti = (reclickService = false) => {
   notiCount = { ...notiCountIntial };
@@ -343,7 +401,8 @@ const utils_rewriteNotiCountToButton = () => {
 
 const utils_stylingFilterBar = () => {
   let titleNoti = document.querySelector(".-title");
-  document.querySelector(".list-notis").style.width = "60%";
+  let listNoti = document.querySelector(".list-notis");
+  if (listNoti) listNoti.style.width = "60%";
   if (titleNoti) {
     titleNoti.style.width = "300%";
     titleNoti.style.height = "55px";
@@ -420,13 +479,16 @@ const config_load = async () => {
   CONFIG.ENABLE_SERVICES = cfg;
   if (cfg.disableAll) return;
 
-  if (cfg.smarterNoti) main_smarterNoti();
+  if (cfg.smarterNoti) {
+    main_smarterNoti({
+      smarterNoti_faster_like_it_gone: cfg.smarterNoti_faster_like_it_gone
+    })
+  };
   if (cfg.smarterTitle) main_smarterTitle();
   if (currentUrl.includes("wework")) {
     if (cfg.wwHyperlink) main_makeWwCanHyperlink();
   };
 }
-config_load();
 
 const utils_hookApi = () => {
   let proxied = window.XMLHttpRequest.prototype.open;
@@ -456,4 +518,13 @@ const utils_hookApi = () => {
     return proxied.apply(this, [].slice.call(arguments));
   };
 }
-utils_hookApi();
+
+const sendErrorLog = () => {
+};
+
+try {
+  config_load();
+  utils_hookApi();
+} catch (error) {
+
+}
