@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.8.2';
+const version = '0.2.8.3';
 const env = 'dev';
 
 // ==UserScript==
 // @name         Smarter Base.vn - DEV
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8.2
+// @version      0.2.8.3
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -163,22 +163,22 @@ const wwHyperlink_tips = () => {
   iconTip.setAttribute("src", "https://cdn-icons-png.flaticon.com/512/551/551080.png");
   iconTip.style.width = '20px';
   iconTip.style.paddingBottom = '10px';
-  iconTip.style.paddingLeft = '5px';
+  iconTip.style.paddingLeft = '30px';
 
   let tipTextDiv = document.createElement("span");
-  tipTextDiv.innerText = "Mẹo vặt cuộc sống: Link task giờ đây có thể bấm chuột phải hoặc chuột giữa (để nhảy tab mới)";
+  tipTextDiv.innerText = "Mẹo vặt cuộc sống: Link task giờ đây có thể \nbấm chuột phải (mở menu) \nhoặc chuột giữa (để nhảy tab mới)";
   tipTextDiv.style.display = 'none'
-  tipTextDiv.style.position = 'fixed';
+  tipTextDiv.style.position = 'absolute';
   tipTextDiv.style.backgroundColor = '#71e1ff';
-  tipTextDiv.style.zIndex = '999';
+  tipTextDiv.style.zIndex = '9009';
 
 
   iconTip.onclick = () => {
     tipTextDiv.style.display = clickedTip ? 'block' : 'none';
     clickedTip = !clickedTip;
   }
-  document.querySelector('#header > div.title > div.name').appendChild(iconTip);
-  document.querySelector('#header > div.title > div.name').appendChild(tipTextDiv);
+  if (document.querySelector('#header > div.title > div.name')) document.querySelector('#header > div.title > div.name').appendChild(iconTip);
+  if (document.querySelector('#header > div.title > div.name')) document.querySelector('#header > div.title > div.name').appendChild(tipTextDiv);
 }
 
 const main_smarterNoti = (options) => {
@@ -332,7 +332,6 @@ const utils_showNotiByService = (selectedService, filter = {}) => {
     };
   }
 }
-
 const addAction_onClickNoti = () => {
   let currentService = utils_getCurrentService();
   if (!CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]) return;
@@ -530,4 +529,4 @@ try {
 }
 
 
-if (document.querySelector("#audios")) document.querySelector("#audios").outerHTML = "";
+if (document.querySelector("#audios")) document.querySelector('#audio3').setAttribute("src", "https://www.freesoundslibrary.com/wp-content/uploads/2021/03/bonk-sound-effect.mp3");
