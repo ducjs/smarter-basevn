@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.8.3';
+const version = '0.2.8.4';
 const env = 'dev';
 
 // ==UserScript==
 // @name         Smarter Base.vn - DEV
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8.3
+// @version      0.2.8.4
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -78,7 +78,10 @@ let CONFIG = {
     "smarterNoti_hide_noti": false,
 
     "wwHyperlink": false,
-    "smarterTaskTime": false
+    "smarterTaskTime": false,
+
+    "bonkSound": false,
+    "bonkSoundUrl": ""
   }
 };
 let THEME_CONFIG = {
@@ -466,10 +469,11 @@ const utils_getUserConfig = async () => {
 
 const config_load = async () => {
   let cfg = CONFIG.ENABLE_SERVICES; // Default
+  let liveCfg = await utils_getUserConfig();
   let localCfg = localStorage.getItem("sb_config");
+
   if (!localCfg || localCfg.disableAll === null) { // If no, call API get cfg
-    cfg = await utils_getUserConfig();
-    cfg = cfg.data.config;
+    cfg = liveCfg.data.config;
     localStorage.setItem("sb_config", JSON.stringify(cfg));
   } else {
     cfg = { ...JSON.parse(localCfg) };
@@ -487,6 +491,15 @@ const config_load = async () => {
   if (currentUrl.includes("wework")) {
     if (cfg.wwHyperlink) main_makeWwCanHyperlink();
   };
+  if (cfg.bonkSound) {
+    if (document.querySelector("#audios")) {
+      document
+        .querySelector('#audio3')
+        .setAttribute("src",
+          (cfg.bonkSoundUrl !== "" && cfg.bonkSoundUrl)
+          || "https://www.freesoundslibrary.com/wp-content/uploads/2021/03/bonk-sound-effect.mp3");
+    }
+  }
 }
 
 const utils_hookApi = () => {
@@ -527,6 +540,3 @@ try {
 } catch (error) {
 
 }
-
-
-if (document.querySelector("#audios")) document.querySelector('#audio3').setAttribute("src", "https://www.freesoundslibrary.com/wp-content/uploads/2021/03/bonk-sound-effect.mp3");
