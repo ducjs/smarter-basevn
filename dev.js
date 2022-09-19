@@ -241,12 +241,18 @@ const main_smarterNoti = (options) => {
   }
 
   let soundDivDiv = document.createElement("div");
-  soundDivDiv.innerHTML = "<label>Âm thanh thông báo</label>";
+  soundDivDiv.innerHTML = "<label style ='margin-right: 3px'>Âm thanh thông báo</label>";
   let soundDiv = noti_genSelectSoundDiv();
   soundDivDiv.appendChild(soundDiv);
   soundDivDiv.style.display = "inline";
   soundDivDiv.style.fontSize = "16px";
   soundDivDiv.style.marginLeft = "5px";
+  let tipTextDiv = document.createElement("label");
+  tipTextDiv.innerText = "Nhớ F5 lại các trang đang mở";
+  tipTextDiv.id = "select-sound";
+  tipTextDiv.style.display = "none";
+  soundDivDiv.appendChild(tipTextDiv);
+
   noti_grid_2.appendChild(soundDivDiv);
 
   let checkHasNoti = setInterval(() => { // Count noti
@@ -279,7 +285,6 @@ const noti_genSelectSoundDiv = () => {
   </select>
   */
 
-  // <label for="noti_sound_list">Âm thanh thông báo</label>
   let selectDiv = document.createElement("select");
   selectDiv.name = "noti_sound_list";
   selectDiv.id = "noti_sound_list";
@@ -306,6 +311,9 @@ const noti_onSelectSound = (email, soundKey) => {
   let notiSoundObj = JSON.parse(localStorage.getItem("noti_sound_obj"));
   var audio = new Audio(notiSoundObj[soundKey].link);
   audio.play();
+
+  document.querySelector("#select-sound").style.display = "inline";
+
   // Write local
   let sb_config = JSON.parse(localStorage.getItem('sb_config'));
   sb_config.noti_sound_key = soundKey;
