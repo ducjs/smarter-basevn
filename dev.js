@@ -336,7 +336,7 @@ const noti_changeSound = () => {
   if (!notiSoundObj || !notiSoundObj.length) return;
   notiSoundObj = JSON.parse(notiSoundObj);
   let userSoundKey = sb_config["noti_sound_key"];
-  if (!userSoundKey) return;
+  if (!userSoundKey || userSoundKey === "default") return;
 
   let link = notiSoundObj[userSoundKey]["link"];
 
