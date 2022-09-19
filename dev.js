@@ -463,6 +463,7 @@ const utils_getUserConfig = async () => {
     body: JSON.stringify(userInfo),
     headers: { 'Content-Type': 'text/plain;charset=utf-8' }
   })
+  localStorage.setItem("sb_config", JSON.stringify(cfg.json().data.config));
   return cfg.json();
 }
 
