@@ -197,7 +197,7 @@ const main_smarterNoti = (options) => {
   const mt = () => utils_showNotiByService("meeting");
 
   const plus5 = () => utils_loadMoreNoti({ num: 5, isFirstTime: false });
-  const selectSound = () => utils_loadMoreNoti();
+  // const selectSound = () => utils_loadMoreNoti();
 
   const grid_1_items = [
     ["all", all],
@@ -240,20 +240,23 @@ const main_smarterNoti = (options) => {
     if (titleDiv) noti_grid_2.appendChild(btn);
   }
 
-  let soundDivDiv = document.createElement("div");
-  soundDivDiv.innerHTML = "<label style ='margin-right: 3px'>Âm thanh thông báo</label>";
-  let soundDiv = noti_genSelectSoundDiv();
-  soundDivDiv.appendChild(soundDiv);
-  soundDivDiv.style.display = "inline";
-  soundDivDiv.style.fontSize = "16px";
-  soundDivDiv.style.marginLeft = "5px";
-  let tipTextDiv = document.createElement("label");
-  tipTextDiv.innerText = "Nhớ F5 lại các trang đang mở";
-  tipTextDiv.id = "select-sound";
-  tipTextDiv.style.display = "none";
-  soundDivDiv.appendChild(tipTextDiv);
 
-  noti_grid_2.appendChild(soundDivDiv);
+  if (options.changeNotiSound) {
+    let soundDivDiv = document.createElement("div");
+    soundDivDiv.innerHTML = "<label style ='margin-right: 3px'>Âm thanh thông báo(beta)</label>";
+    let soundDiv = noti_genSelectSoundDiv();
+    soundDivDiv.appendChild(soundDiv);
+    soundDivDiv.style.display = "inline";
+    soundDivDiv.style.fontSize = "16px";
+    soundDivDiv.style.marginLeft = "5px";
+    let tipTextDiv = document.createElement("label");
+    tipTextDiv.innerText = "Nhớ F5 lại các trang đang mở; Có thể liên hệ tui để thêm sound :v";
+    tipTextDiv.id = "select-sound";
+    tipTextDiv.style.display = "none";
+    soundDivDiv.appendChild(tipTextDiv);
+    noti_grid_2.appendChild(soundDivDiv);
+
+  }
 
   let checkHasNoti = setInterval(() => { // Count noti
     if (document.querySelectorAll(".notis").length) {
@@ -263,10 +266,6 @@ const main_smarterNoti = (options) => {
   }, 200);
 
 };
-
-const noti_selectNotiSound = () => {
-
-}
 
 const noti_genSelectSoundDiv = () => {
   let notiSoundList = localStorage.getItem("noti_sound_list");
@@ -350,8 +349,6 @@ const noti_changeSound = () => {
 
   }
 }
-noti_changeSound();
-
 
 const main_smarterTitle = () => {
   let oldTitle = "";
@@ -623,9 +620,12 @@ const config_load = async () => {
   CONFIG.ENABLE_SERVICES = cfg;
   if (cfg.disableAll) return;
 
+  if (cfg.change_noti_sound) noti_changeSound();
+
   if (cfg.smarterNoti) {
     main_smarterNoti({
-      smarterNoti_faster_like_it_gone: cfg.smarterNoti_faster_like_it_gone
+      smarterNoti_faster_like_it_gone: cfg.smarterNoti_faster_like_it_gone,
+      changeNotiSound: cfg.change_noti_sound
     })
   };
   if (cfg.smarterTitle) main_smarterTitle();

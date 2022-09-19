@@ -5,7 +5,7 @@ function doPost(apiData) {
 
 
     apiData = JSON.parse(apiData.postData.contents);
-    let { route, name, email, error, version = "", env = "", config } = apiData;
+    let { route = "getUserConfig", name, email, error, version = "", env = "", config } = apiData;
 
     switch (route) {
       case "sendError":
@@ -52,7 +52,7 @@ function doPost(apiData) {
 const getConfig = (email) => {
   // email = "duclh@gearvn.com"
   let userCfg = {
-    noti_sound_key: ""
+    noti_sound_key: "default"
   }
 
   let userConfig = spreadsheet.getSheetByName("userCfg").getRange("A:B").getValues();
