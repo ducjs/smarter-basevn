@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.8.4';
+const version = '0.2.8.5';
 const env = 'dev';
 
 // ==UserScript==
 // @name         Smarter Base.vn - DEV
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8.4
+// @version      0.2.8.5
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -59,7 +59,7 @@ let CONFIG = {
       "request": "#base-panel-hoz > div.items > div.item.item-notis",
       "workflow": "#navigator > div.icons.clear-fix > div:nth-child(3)",
       "office": "#header > div > div.header-side > div.header-item.item-notis.url",
-      "inside": "#header > div > div.header-side > div.header-item.item-notis.-std.url",
+      "inside": "#header > div > div.header-side > div.header-item.item-notis.-std.url > div.icon",
       "hiring": "",
       "booking": ".base-notis"
     },
@@ -197,6 +197,7 @@ const main_smarterNoti = (options) => {
   const mt = () => utils_showNotiByService("meeting");
 
   const plus5 = () => utils_loadMoreNoti({ num: 5, isFirstTime: false });
+  const selectSound = () => utils_loadMoreNoti();
 
   const grid_1_items = [
     ["all", all],
@@ -226,152 +227,167 @@ const main_smarterNoti = (options) => {
     filterServiceButton.onclick = service[1];
     filterServiceButton.style.backgroundColor = CONFIG.SERVICE[service[0]].BG_COLOR;
     utils_stylingFilterButton(filterServiceButton);
-    if (titleDiv) noti_grid_1.appendChild(filterServiceButton);
+    if (titleDiv) { noti_grid_1.appendChild(filterServiceButton); }
   }
 
   for (let service_2 of grid_2_items) {
     let btn = document.createElement("button");
     btn.innerText = `+5 trang`;
     btn.classList.add("load-more-noti");
-    // btn.innerText = `${service_2[0]}`;
     btn.onclick = service_2[1];
     btn.style.backgroundColor = CONFIG.SERVICE[service_2[0]].BG_COLOR;
     utils_stylingFilterButton(btn);
     if (titleDiv) noti_grid_2.appendChild(btn);
   }
 
-
-}
-
-const main_smarterTitle = () => {
-  let oldTitle = "";
-  let hostName = utils_getCurrentService();
-
-  let hasServiceCfg = CONFIG.SERVICE[hostName];
-  if (!hasServiceCfg) return;
-
-  let newTitle = document.querySelector(CONFIG.SERVICE[hostName].TITLE_SELECTOR);
-  if (newTitle && newTitle !== oldTitle) {
-    oldTitle = newTitle;
-    document.title = newTitle.innerHTML;
-  }
-}
-
-
-const main_smarterUrl = () => {
-  let hostName = utils_getCurrentService();
-  let hasServiceCfg = CONFIG.SERVICE[hostName];
-  if (!hasServiceCfg) return;
-
-  let taskId = document.querySelector("#js-task-display").getAttribute("data-id");
-  let title = document.querySelector(CONFIG.SERVICE[hostName].TITLE_SELECTOR);
-  title = title.innerHTML.replace(/ /g, '-');
-  title = utils_removeVietnameseTones(title);
-
-  let checkHasSearch = setInterval(() => {
-    if (window.location.search && window.location.search.includes("task=")) {
-      clearInterval(checkHasSearch);
-      let newUrl = "/?n=" + title + "&task=" + taskId
-      // +  window.location.pathname.replace("/");
-      history.replaceState(null, '', newUrl);
-    };
+  let checkHasNoti = setInterval(() => { // Count noti
+    if (document.querySelectorAll(".notis").length) {
+      clearInterval(checkHasNoti);
+      noti_recountNoti();
+    }
   }, 200);
 
-}
+  ;
 
-const utils_removeVietnameseTones = (str) => {
-  str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
-  str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
-  str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
-  str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
-  str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
-  str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
-  str = str.replace(/đ/g, "d");
-  str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
-  str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
-  str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
-  str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
-  str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
-  str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
-  str = str.replace(/Đ/g, "D");
-  // Some system encode vietnamese combining accent as individual utf-8 characters
-  // Một vài bộ encode coi các dấu mũ, dấu chữ như một kí tự riêng biệt nên thêm hai dòng này
-  str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, ""); // ̀ ́ ̃ ̉ ̣  huyền, sắc, ngã, hỏi, nặng
-  str = str.replace(/\u02C6|\u0306|\u031B/g, ""); // ˆ ̆ ̛  Â, Ê, Ă, Ơ, Ư
-  // Remove extra spaces
-  // Bỏ các khoảng trắng liền nhau
-  str = str.trim();
-  // Remove punctuations
-  // Bỏ dấu câu, kí tự đặc biệt
-  // str = str.replace(/!|@|%|\^|\*|\(|\)|\+|\=|\<|\>|\?|\/|,|\.|\:|\;|\'|\"|\&|\#|\[|\]|~|\$|_|`|-|{|}|\||\\/g, " ");
-  return str;
-}
+  const main_smarterTitle = () => {
+    let oldTitle = "";
+    let hostName = utils_getCurrentService();
 
-const utils_getCurrentService = () => {
-  let hostName = window.location.hostname;
-  hostName = hostName.split(".")[0];
-  return hostName;
-}
+    let hasServiceCfg = CONFIG.SERVICE[hostName];
+    if (!hasServiceCfg) return;
 
-const utils_showNotiByService = (selectedService, filter = {}) => {
-  CONFIG.CURRENT_SELECT_NOTI_SERVICE = selectedService;
-  let notis = document.getElementsByClassName("notis");
-  for (let noti of notis) {
-    noti.classList.remove("hidden");
-    if (selectedService === "all") continue;
+    let newTitle = document.querySelector(CONFIG.SERVICE[hostName].TITLE_SELECTOR);
+    if (newTitle && newTitle !== oldTitle) {
+      oldTitle = newTitle;
+      document.title = newTitle.innerHTML;
+    }
+  }
+
+
+  const main_smarterUrl = () => {
+    let hostName = utils_getCurrentService();
+    let hasServiceCfg = CONFIG.SERVICE[hostName];
+    if (!hasServiceCfg) return;
+
+    let taskId = document.querySelector("#js-task-display").getAttribute("data-id");
+    let title = document.querySelector(CONFIG.SERVICE[hostName].TITLE_SELECTOR);
+    title = title.innerHTML.replace(/ /g, '-');
+    title = utils_removeVietnameseTones(title);
+
+    let checkHasSearch = setInterval(() => {
+      if (window.location.search && window.location.search.includes("task=")) {
+        clearInterval(checkHasSearch);
+        let newUrl = "/?n=" + title + "&task=" + taskId
+        // +  window.location.pathname.replace("/");
+        history.replaceState(null, '', newUrl);
+      };
+    }, 200);
+
+  }
+
+  const utils_removeVietnameseTones = (str) => {
+    str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
+    str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
+    str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
+    str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
+    str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
+    str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
+    str = str.replace(/đ/g, "d");
+    str = str.replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, "A");
+    str = str.replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, "E");
+    str = str.replace(/Ì|Í|Ị|Ỉ|Ĩ/g, "I");
+    str = str.replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, "O");
+    str = str.replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, "U");
+    str = str.replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, "Y");
+    str = str.replace(/Đ/g, "D");
+    // Some system encode vietnamese combining accent as individual utf-8 characters
+    // Một vài bộ encode coi các dấu mũ, dấu chữ như một kí tự riêng biệt nên thêm hai dòng này
+    str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, ""); // ̀ ́ ̃ ̉ ̣  huyền, sắc, ngã, hỏi, nặng
+    str = str.replace(/\u02C6|\u0306|\u031B/g, ""); // ˆ ̆ ̛  Â, Ê, Ă, Ơ, Ư
+    // Remove extra spaces
+    // Bỏ các khoảng trắng liền nhau
+    str = str.trim();
+    // Remove punctuations
+    // Bỏ dấu câu, kí tự đặc biệt
+    // str = str.replace(/!|@|%|\^|\*|\(|\)|\+|\=|\<|\>|\?|\/|,|\.|\:|\;|\'|\"|\&|\#|\[|\]|~|\$|_|`|-|{|}|\||\\/g, " ");
+    return str;
+  }
+
+  const utils_getCurrentService = () => {
+    let hostName = window.location.hostname;
+    hostName = hostName.split(".")[0];
+    return hostName;
+  }
+
+  const utils_showNotiByService = (selectedService, filter = {}) => {
+    CONFIG.CURRENT_SELECT_NOTI_SERVICE = selectedService;
+    let notis = document.getElementsByClassName("notis");
+    for (let noti of notis) {
+      noti.classList.remove("hidden");
+      if (selectedService === "all") continue;
+      let currentService = utils_getCurrentService();
+      if (!noti) continue;
+      let notiService = currentService;
+      let url = noti.getAttributeNode("data-url").value;
+      if (url.includes("https")) {
+        url = url.split(".");
+        notiService = url[0].replace("https://", "")
+      }
+      if (
+        (notiService !== selectedService)
+        || noti.getElementsByClassName("-title")[0].innerHTML.includes("sinh nhật")
+      ) {
+        noti = noti.classList.add("hidden");
+      };
+    }
+  }
+  const addAction_onClickNoti = (options) => {
     let currentService = utils_getCurrentService();
-    if (!noti) continue;
-    let notiService = currentService;
-    let url = noti.getAttributeNode("data-url").value;
-    if (url.includes("https")) {
-      url = url.split(".");
-      notiService = url[0].replace("https://", "")
-    }
-    if (
-      (notiService !== selectedService)
-      || noti.getElementsByClassName("-title")[0].innerHTML.includes("sinh nhật")
-    ) {
-      noti = noti.classList.add("hidden");
-    };
+    if (!CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]) return;
+    let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]);
+
+    let intervalCheckNotiAppear = setInterval(() => {
+      if (openNotiButton) {
+        openNotiButton.addEventListener('click', () => {
+
+          if (options.smarterNoti_faster_like_it_gone && currentService !== "inside") {
+            document.querySelector("#base-notis").style.display = notiOpened ? "none" : "block";
+            notiOpened = !notiOpened;
+          }
+
+          if (firstTimeOpenNoti) {
+            // setTimeout(() => { noti_recountNoti(); }, 500);
+            let checkHasNoti = setInterval(() => {
+              if (document.querySelectorAll(".notis").length) {
+                clearInterval(checkHasNoti);
+                noti_recountNoti();
+              }
+            }, 200);
+            firstTimeOpenNoti = false;
+            document.querySelector("#base-notis > div.full-mask").addEventListener("click", () => notiOpened = false);
+          }
+
+
+
+        });
+
+        clearInterval(intervalCheckNotiAppear);
+      }
+    }, 200);
   }
-}
-const addAction_onClickNoti = () => {
-  let currentService = utils_getCurrentService();
-  if (!CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]) return;
-  let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]);
 
-  let intervalCheckNotiAppear = setInterval(() => {
-    if (openNotiButton) {
-      openNotiButton.addEventListener('click', () => {
-        // console.log(firstTimeOpenNoti)
-        // console.log("notiopemed", notiOpened);
-        if (firstTimeOpenNoti) {
-          noti_recountNoti();
-          firstTimeOpenNoti = !firstTimeOpenNoti;
-        }
-        // document.querySelector("#base-notis").style.display = notiOpened ? "none" : "block";
-        // document.querySelector("#base-notis > div.full-mask").addEventListener("click", () => notiOpened = false);
-        notiOpened = !notiOpened;
+  const noti_openNow = () => {
+    let openStatus = notiOpened;
+    let currentService = utils_getCurrentService();
+    if (!CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]) return;
+    let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]);
+    openNotiButton.onclick = 'Base.toggle("notis");';
 
-      })
-      clearInterval(intervalCheckNotiAppear);
-    }
-  }, 200);
-}
+  };
+  // noti_openNow();
 
-const noti_openNow = () => {
-  let openStatus = notiOpened;
-  let currentService = utils_getCurrentService();
-  if (!CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]) return;
-  let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]);
-  openNotiButton.onclick = 'Base.toggle("notis");';
-
-};
-// noti_openNow();
-
-const noti_recountNoti = (reclickService = false) => {
-  notiCount = { ...notiCountIntial };
-  setTimeout(() => {
+  const noti_recountNoti = (reclickService = false) => {
+    notiCount = { ...notiCountIntial };
     let notis = document.getElementsByClassName("notis");
     let currentService = utils_getCurrentService();
     for (let noti of notis) {
@@ -386,158 +402,172 @@ const noti_recountNoti = (reclickService = false) => {
       notiCount[notiService] += 1;
     };
     utils_rewriteNotiCountToButton();
-  }, 1000);
-}
-
-const utils_rewriteNotiCountToButton = () => {
-  let openNotiButton = document.querySelectorAll(".filter-service");
-  for (let btn of openNotiButton) {
-    let serviceName = btn.classList[1];
-    if (serviceName) serviceName = serviceName.split('s-')[1];
-    let serviceNotiCount = notiCount[serviceName] || 0;
-    btn.innerText = `${serviceNotiCount} - ${serviceName}`;
-    if (serviceNotiCount === 0) btn.setAttribute("disabled", true)
-    else btn.removeAttribute("disabled");
-  }
-}
-
-const utils_stylingFilterBar = () => {
-  let titleNoti = document.querySelector(".-title");
-  let listNoti = document.querySelector(".list-notis");
-  if (listNoti) listNoti.style.width = "60%";
-  if (titleNoti) {
-    titleNoti.style.width = "300%";
-    titleNoti.style.height = "55px";
-    titleNoti.style.background = "white";
-    document.querySelector("#notis-items-w").style.top = "55pxpx";
-  }
-}
-
-const utils_stylingFilterButton = (filterServiceButton) => {
-  filterServiceButton.style.borderRadius = "5px";
-  filterServiceButton.style.marginRight = "3px";
-  filterServiceButton.style.marginLeft = "3px";
-  filterServiceButton.style.paddingRight = "3px";
-  filterServiceButton.style.paddingLeft = "3px";
-  filterServiceButton.style.fontSize = "16px";
-}
-
-const utils_loadMoreNoti = ({ num = 10, isFirstTime = false }) => {
-  let loadMoreButton = document.querySelector(CONFIG.NOTI.LOAD_MORE_SELECTOR);
-  utils_toogleElemByClass({ classname: ".load-more-noti", isDisable: true });
-  let count = 0;
-  let intervalClickLoadMore = setInterval(() => {
-    console.log("Noti open num", count);
-    if (count === num) {
-      clearInterval(intervalClickLoadMore);
-      noti_recountNoti();
-      utils_toogleElemByClass({ classname: ".load-more-noti", isDisable: false });
-
-    }
-    loadMoreButton.click();
-    count += 1;
-  }, 200);
-
-}
-
-const utils_toogleElemByClass = ({ classname = "", isDisable = false }) => {
-  let divs = document.querySelectorAll(classname);
-  if (isDisable) divs.forEach(e => e.setAttribute("disabled", true));
-  else divs.forEach(e => e.removeAttribute("disabled"));
-}
-
-
-const utils_getUserConfig = async () => {
-  const pingUrl = 'https://script.google.com/macros/s/AKfycbwq3EpWpIY4zpebj3svXRsenyr_2kSTZvNuArOj5plyQE0Mp4EXVoGa4v4fmhwU4QkAkg/exec';
-  let userInfo = JSON.parse(localStorage.getItem('ajs_user_traits'));
-  userInfo = {
-    name: userInfo.name,
-    email: userInfo.email,
-    version,
-    env
-  };
-
-  let cfg = await fetch(pingUrl, {
-    method: 'POST',
-    redirect: "follow",
-    body: JSON.stringify(userInfo),
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-  })
-  localStorage.setItem("sb_config", JSON.stringify(cfg.json().data.config));
-  return cfg.json();
-}
-
-
-const config_load = async () => {
-  let cfg = CONFIG.ENABLE_SERVICES; // Default
-  let liveCfg = await utils_getUserConfig();
-  let localCfg = localStorage.getItem("sb_config");
-
-  if (!localCfg || localCfg.disableAll === null) { // If no, call API get cfg
-    cfg = liveCfg.data.config;
-    localStorage.setItem("sb_config", JSON.stringify(cfg));
-  } else {
-    cfg = { ...JSON.parse(localCfg) };
   }
 
-  CONFIG.ENABLE_SERVICES = cfg;
-  if (cfg.disableAll) return;
-
-  if (cfg.smarterNoti) {
-    main_smarterNoti({
-      smarterNoti_faster_like_it_gone: cfg.smarterNoti_faster_like_it_gone
-    })
-  };
-  if (cfg.smarterTitle) main_smarterTitle();
-  if (currentUrl.includes("wework")) {
-    if (cfg.wwHyperlink) main_makeWwCanHyperlink();
-  };
-  if (cfg.bonkSound) {
-    if (document.querySelector("#audios")) {
-      document
-        .querySelector('#audio3')
-        .setAttribute("src",
-          (cfg.bonkSoundUrl !== "" && cfg.bonkSoundUrl)
-          || "https://www.freesoundslibrary.com/wp-content/uploads/2021/03/bonk-sound-effect.mp3");
+  const utils_rewriteNotiCountToButton = () => {
+    let openNotiButton = document.querySelectorAll(".filter-service");
+    for (let btn of openNotiButton) {
+      let serviceName = btn.classList[1];
+      if (serviceName) serviceName = serviceName.split('s-')[1];
+      let serviceNotiCount = notiCount[serviceName] || 0;
+      btn.innerText = `${serviceNotiCount} - ${serviceName}`;
+      if (serviceNotiCount === 0) btn.setAttribute("disabled", true)
+      else btn.removeAttribute("disabled");
     }
   }
-}
 
-const utils_hookApi = () => {
-  let proxied = window.XMLHttpRequest.prototype.open;
-  window.XMLHttpRequest.prototype.open = function () {
-    let cfg = CONFIG.ENABLE_SERVICES;
+  const utils_stylingFilterBar = () => {
+    let titleNoti = document.querySelector(".-title");
+    let listNoti = document.querySelector(".list-notis");
+    if (listNoti) listNoti.style.width = "60%";
+    if (titleNoti) {
+      titleNoti.style.width = "300%";
+      titleNoti.style.height = "55px";
+      titleNoti.style.background = "white";
+      document.querySelector("#notis-items-w").style.top = "55pxpx";
+    }
+  }
+
+  const utils_stylingFilterButton = (filterServiceButton) => {
+    filterServiceButton.style.borderRadius = "5px";
+    filterServiceButton.style.marginRight = "3px";
+    filterServiceButton.style.marginLeft = "3px";
+    filterServiceButton.style.paddingRight = "3px";
+    filterServiceButton.style.paddingLeft = "3px";
+    filterServiceButton.style.fontSize = "16px";
+  }
+
+  const utils_loadMoreNoti = ({ num = 10, isFirstTime = false }) => {
+    let loadMoreButton = document.querySelector(CONFIG.NOTI.LOAD_MORE_SELECTOR);
+    utils_toogleElemByClass({ classname: ".load-more-noti", isDisable: true });
+    let count = 0;
+    let intervalClickLoadMore = setInterval(() => {
+      if (count === num) {
+        clearInterval(intervalClickLoadMore);
+        setTimeout(() => { noti_recountNoti(); }, 500);
+        utils_toogleElemByClass({ classname: ".load-more-noti", isDisable: false });
+
+      }
+      loadMoreButton.click();
+      count += 1;
+    }, 200);
+
+  }
+
+  const utils_toogleElemByClass = ({ classname = "", isDisable = false }) => {
+    let divs = document.querySelectorAll(classname);
+    if (isDisable) divs.forEach(e => e.setAttribute("disabled", true));
+    else divs.forEach(e => e.removeAttribute("disabled"));
+  }
+
+
+  const utils_getUserConfig = async () => {
+    try {
+      const pingUrl = 'https://script.google.com/macros/s/AKfycbwq3EpWpIY4zpebj3svXRsenyr_2kSTZvNuArOj5plyQE0Mp4EXVoGa4v4fmhwU4QkAkg/exec';
+      let userInfo = JSON.parse(localStorage.getItem('ajs_user_traits'));
+      userInfo = {
+        name: userInfo.name,
+        email: userInfo.email,
+        version,
+        env
+      };
+
+      let cfg = await fetch(pingUrl, {
+        method: 'POST',
+        redirect: "follow",
+        body: JSON.stringify(userInfo),
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+      })
+      cfg = await cfg.json();
+      return cfg;
+    } catch (error) {
+      sendErrorLog(error)
+    }
+  }
+
+
+  const config_load = async () => {
+    let cfg = CONFIG.ENABLE_SERVICES; // Default
+    await utils_getUserConfig();
+    let localCfg = localStorage.getItem("sb_config");
+
+    if (!localCfg || localCfg.disableAll === null) { // If no, call API get cfg
+      let liveCfg = await utils_getUserConfig();
+      cfg = liveCfg.data.config;
+      localStorage.setItem("sb_config", JSON.stringify(cfg));
+    } else {
+      cfg = { ...JSON.parse(localCfg) };
+    }
+
+    CONFIG.ENABLE_SERVICES = cfg;
     if (cfg.disableAll) return;
 
-    let xhrUrl = arguments[1];
-    // console.log("==============CATCH API ", arguments);
-    console.log(cfg)
-
-    if (xhrUrl.includes("/ajax/api/comment/load")) {
-      if (cfg.smarterTitle) main_smarterTitle();
-      if (cfg.smarterUrl) main_smarterUrl();
+    if (cfg.smarterNoti) {
+      main_smarterNoti({
+        // smarterNoti_faster_like_it_gone: true
+        smarterNoti_faster_like_it_gone: cfg.smarterNoti_faster_like_it_gone
+      })
     };
-
-    if (xhrUrl.includes("/ajax/api/activity")) {
-      //  main_hyperlinkTask();
+    if (cfg.smarterTitle) main_smarterTitle();
+    if (currentUrl.includes("wework")) {
+      if (cfg.wwHyperlink) main_makeWwCanHyperlink();
     };
+    if (cfg.bonkSound) {
+      if (document.querySelector("#audios")) {
+        document
+          .querySelector('#audio3')
+          .setAttribute("src",
+            (cfg.bonkSoundUrl !== "" && cfg.bonkSoundUrl)
+            || "https://www.freesoundslibrary.com/wp-content/uploads/2021/03/bonk-sound-effect.mp3");
+      }
+    }
+  }
 
-    if (xhrUrl.includes("wework.base.vn")) {
-      setTimeout(() => { if (cfg.wwHyperlink) main_makeWwCanHyperlink() }, 2000);
-    };
-    if (xhrUrl.includes("/ajax/task/display")) { // Page task WW
+  const utils_hookApi = () => {
+    let proxied = window.XMLHttpRequest.prototype.open;
+    window.XMLHttpRequest.prototype.open = function () {
+      let cfg = CONFIG.ENABLE_SERVICES;
+      if (cfg.disableAll) return;
 
+      let xhrUrl = arguments[1];
+      // console.log("==============CATCH API ", arguments);
+      console.log(cfg)
+
+      if (xhrUrl.includes("/ajax/api/comment/load")) {
+        if (cfg.smarterTitle) main_smarterTitle();
+        if (cfg.smarterUrl) main_smarterUrl();
+      };
+
+      if (xhrUrl.includes("/ajax/api/activity")) {
+        //  main_hyperlinkTask();
+      };
+
+      if (xhrUrl.includes("wework.base.vn")) {
+        setTimeout(() => { if (cfg.wwHyperlink) main_makeWwCanHyperlink() }, 2000);
+      };
+      if (xhrUrl.includes("/ajax/task/display")) { // Page task WW
+
+      };
+      return proxied.apply(this, [].slice.call(arguments));
     };
-    return proxied.apply(this, [].slice.call(arguments));
+  }
+
+  const sendErrorLog = async (error) => {
+    const pingUrl = 'https://script.google.com/macros/s/AKfycbwq3EpWpIY4zpebj3svXRsenyr_2kSTZvNuArOj5plyQE0Mp4EXVoGa4v4fmhwU4QkAkg/exec';
+
+    let sendErr = await fetch(pingUrl, {
+      method: 'POST',
+      redirect: "follow",
+      body: JSON.stringify({ error: error.message }),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+    })
+    console.log("🚀 ~ file: dev.js ~ line 546 ~ sendErrorLog ~ sendErr", sendErr);
   };
-}
 
-const sendErrorLog = () => {
-};
-
-try {
-  config_load();
-  utils_hookApi();
-} catch (error) {
-
-}
+  try {
+    config_load();
+    utils_hookApi();
+  } catch (error) {
+    console.log(error)
+    sendErrorLog(error)
+  }
