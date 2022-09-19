@@ -3,10 +3,10 @@ const version = '0.2.8.6';
 const env = 'prod';
 
 // ==UserScript==
-// @name         Smarter Base.vn
+// @name         Smarter Base.vn - PROD
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8.5
+// @version      0.2.8.6
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -243,16 +243,25 @@ const main_smarterNoti = (options) => {
 
   if (options.changeNotiSound) {
     let soundDivDiv = document.createElement("div");
-    soundDivDiv.innerHTML = "<label style ='margin-right: 3px'>Âm thanh thông báo(beta)</label>";
+    soundDivDiv.innerHTML = "<label style ='margin-right: 3px'>Âm thông báo(beta)</label>";
     let soundDiv = noti_genSelectSoundDiv();
     soundDivDiv.appendChild(soundDiv);
     soundDivDiv.style.display = "inline";
     soundDivDiv.style.fontSize = "16px";
     soundDivDiv.style.marginLeft = "5px";
+
+    let btnConfirmSound = document.createElement("button");
+    btnConfirmSound.innerText = "Chọn";
+    btnConfirmSound.id = "btn-select-sound";
+    btnConfirmSound.style.display = "none";
+    btnConfirmSound.onclick = () => noti_confirmSelectSound();;
+
     let tipTextDiv = document.createElement("label");
-    tipTextDiv.innerText = "Nhớ F5 lại các trang đang mở; Có thể liên hệ tui để thêm sound :v";
+    tipTextDiv.innerText = "Chọn xong nhớ F5";
     tipTextDiv.id = "select-sound";
     tipTextDiv.style.display = "none";
+
+    soundDivDiv.appendChild(btnConfirmSound);
     soundDivDiv.appendChild(tipTextDiv);
     noti_grid_2.appendChild(soundDivDiv);
 
@@ -312,18 +321,28 @@ const noti_onSelectSound = (email, soundKey) => {
   audio.play();
 
   document.querySelector("#select-sound").style.display = "inline";
+  document.querySelector("#btn-select-sound").style.display = "inline";
 
   // Write local
   let sb_config = JSON.parse(localStorage.getItem('sb_config'));
   sb_config.noti_sound_key = soundKey;
   localStorage.setItem("sb_config", JSON.stringify(sb_config))
   //Write API
+
+}
+
+const noti_confirmSelectSound = () => {
+  let userInfo = JSON.parse(localStorage.getItem('ajs_user_traits'));
+  let sb_config = JSON.parse(localStorage.getItem('sb_config'));
+  let email = userInfo.email;
+  let userNotiSoundKey = sb_config.noti_sound_key;
+
   callAPI("changeNotiSound",
     {
       email,
       config: {
         noti_sound_key:
-          soundKey
+          userNotiSoundKey
       }
     })
 }
