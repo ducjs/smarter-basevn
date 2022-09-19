@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.8.4';
-const env = 'dev';
+const version = '0.2.8.6';
+const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8.4
+// @version      0.2.8.5
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -59,7 +59,7 @@ let CONFIG = {
       "request": "#base-panel-hoz > div.items > div.item.item-notis",
       "workflow": "#navigator > div.icons.clear-fix > div:nth-child(3)",
       "office": "#header > div > div.header-side > div.header-item.item-notis.url",
-      "inside": "#header > div > div.header-side > div.header-item.item-notis.-std.url",
+      "inside": "#header > div > div.header-side > div.header-item.item-notis.-std.url > div.icon",
       "hiring": "",
       "booking": ".base-notis"
     },
@@ -197,6 +197,7 @@ const main_smarterNoti = (options) => {
   const mt = () => utils_showNotiByService("meeting");
 
   const plus5 = () => utils_loadMoreNoti({ num: 5, isFirstTime: false });
+  // const selectSound = () => utils_loadMoreNoti();
 
   const grid_1_items = [
     ["all", all],
@@ -226,14 +227,13 @@ const main_smarterNoti = (options) => {
     filterServiceButton.onclick = service[1];
     filterServiceButton.style.backgroundColor = CONFIG.SERVICE[service[0]].BG_COLOR;
     utils_stylingFilterButton(filterServiceButton);
-    if (titleDiv) noti_grid_1.appendChild(filterServiceButton);
+    if (titleDiv) { noti_grid_1.appendChild(filterServiceButton); }
   }
 
   for (let service_2 of grid_2_items) {
     let btn = document.createElement("button");
     btn.innerText = `+5 trang`;
     btn.classList.add("load-more-noti");
-    // btn.innerText = `${service_2[0]}`;
     btn.onclick = service_2[1];
     btn.style.backgroundColor = CONFIG.SERVICE[service_2[0]].BG_COLOR;
     utils_stylingFilterButton(btn);
@@ -241,6 +241,113 @@ const main_smarterNoti = (options) => {
   }
 
 
+  if (options.changeNotiSound) {
+    let soundDivDiv = document.createElement("div");
+    soundDivDiv.innerHTML = "<label style ='margin-right: 3px'>Âm thanh thông báo(beta)</label>";
+    let soundDiv = noti_genSelectSoundDiv();
+    soundDivDiv.appendChild(soundDiv);
+    soundDivDiv.style.display = "inline";
+    soundDivDiv.style.fontSize = "16px";
+    soundDivDiv.style.marginLeft = "5px";
+    let tipTextDiv = document.createElement("label");
+    tipTextDiv.innerText = "Nhớ F5 lại các trang đang mở; Có thể liên hệ tui để thêm sound :v";
+    tipTextDiv.id = "select-sound";
+    tipTextDiv.style.display = "none";
+    soundDivDiv.appendChild(tipTextDiv);
+    noti_grid_2.appendChild(soundDivDiv);
+
+  }
+
+  let checkHasNoti = setInterval(() => { // Count noti
+    if (document.querySelectorAll(".notis").length) {
+      clearInterval(checkHasNoti);
+      noti_recountNoti();
+    }
+  }, 200);
+
+};
+
+const noti_genSelectSoundDiv = () => {
+  let notiSoundList = localStorage.getItem("noti_sound_list");
+  if (!notiSoundList || !notiSoundList.length) return;
+  notiSoundList = JSON.parse(notiSoundList);
+  let userInfo = JSON.parse(localStorage.getItem('ajs_user_traits'));
+  let sb_config = JSON.parse(localStorage.getItem('sb_config'));
+  let email = userInfo.email;
+  let userNotiSoundKey = sb_config.noti_sound_key;
+  /*
+  <select name="cars" id="cars">
+    <option value="volvo">Volvo</option>
+    <option value="saab">Saab</option>
+    <option value="mercedes">Mercedes</option>
+    <option value="audi">Audi</option>
+  </select>
+  */
+
+  let selectDiv = document.createElement("select");
+  selectDiv.name = "noti_sound_list";
+  selectDiv.id = "noti_sound_list";
+  selectDiv.onchange = (soundKey) => {
+    noti_onSelectSound(email, soundKey.target.value)
+  }
+  // let selectDiv = `<select name="noti_sound_list" id="noti_sound_list" selected="${userNotiSound}">  `
+  for (let sound of notiSoundList) {
+    let key = sound[0];
+    let value = sound[1];
+    let optionDiv = document.createElement("option");
+    optionDiv.value = key;
+    optionDiv.innerText = value;
+    optionDiv.selected = key === userNotiSoundKey ? "selected" : "";
+    // optionDiv.addEventListener("select", () => { noti_onSelectSound(username, key) });
+
+    selectDiv.appendChild(optionDiv);
+    // let optionDiv = `<option value="${key}" onselect={noti_onSelectSound("${username}","${key}")}>${value}</option>`;
+  }
+  return selectDiv;
+}
+
+const noti_onSelectSound = (email, soundKey) => {
+  let notiSoundObj = JSON.parse(localStorage.getItem("noti_sound_obj"));
+  var audio = new Audio(notiSoundObj[soundKey].link);
+  audio.play();
+
+  document.querySelector("#select-sound").style.display = "inline";
+
+  // Write local
+  let sb_config = JSON.parse(localStorage.getItem('sb_config'));
+  sb_config.noti_sound_key = soundKey;
+  localStorage.setItem("sb_config", JSON.stringify(sb_config))
+  //Write API
+  callAPI("changeNotiSound",
+    {
+      email,
+      config: {
+        noti_sound_key:
+          soundKey
+      }
+    })
+}
+
+const noti_changeSound = () => {
+  let sb_config = JSON.parse(localStorage.getItem('sb_config'));
+
+  let notiSoundObj = localStorage.getItem("noti_sound_obj");
+  if (!notiSoundObj || !notiSoundObj.length) return;
+  notiSoundObj = JSON.parse(notiSoundObj);
+  let userSoundKey = sb_config["noti_sound_key"];
+  if (!userSoundKey || userSoundKey === "default") return;
+
+  let link = notiSoundObj[userSoundKey]["link"];
+
+  if (link === "default") return;
+  if (document.querySelector("#audios")) {
+    if (link === "silent") {
+      document.querySelector('#audios').outerHTML = "";
+    } else {
+      document.querySelector('#audio3').setAttribute("src", link);
+    }
+
+  }
 }
 
 const main_smarterTitle = () => {
@@ -335,7 +442,7 @@ const utils_showNotiByService = (selectedService, filter = {}) => {
     };
   }
 }
-const addAction_onClickNoti = () => {
+const addAction_onClickNoti = (options) => {
   let currentService = utils_getCurrentService();
   if (!CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]) return;
   let openNotiButton = document.querySelector(CONFIG.NOTI.OPEN_NOTI_SELECTOR[currentService]);
@@ -343,17 +450,28 @@ const addAction_onClickNoti = () => {
   let intervalCheckNotiAppear = setInterval(() => {
     if (openNotiButton) {
       openNotiButton.addEventListener('click', () => {
-        // console.log(firstTimeOpenNoti)
-        // console.log("notiopemed", notiOpened);
-        if (firstTimeOpenNoti) {
-          noti_recountNoti();
-          firstTimeOpenNoti = !firstTimeOpenNoti;
-        }
-        // document.querySelector("#base-notis").style.display = notiOpened ? "none" : "block";
-        // document.querySelector("#base-notis > div.full-mask").addEventListener("click", () => notiOpened = false);
-        notiOpened = !notiOpened;
 
-      })
+        if (options.smarterNoti_faster_like_it_gone && currentService !== "inside") {
+          document.querySelector("#base-notis").style.display = notiOpened ? "none" : "block";
+          notiOpened = !notiOpened;
+        }
+
+        if (firstTimeOpenNoti) {
+          // setTimeout(() => { noti_recountNoti(); }, 500);
+          let checkHasNoti = setInterval(() => {
+            if (document.querySelectorAll(".notis").length) {
+              clearInterval(checkHasNoti);
+              noti_recountNoti();
+            }
+          }, 200);
+          firstTimeOpenNoti = false;
+          document.querySelector("#base-notis > div.full-mask").addEventListener("click", () => notiOpened = false);
+        }
+
+
+
+      });
+
       clearInterval(intervalCheckNotiAppear);
     }
   }, 200);
@@ -371,22 +489,20 @@ const noti_openNow = () => {
 
 const noti_recountNoti = (reclickService = false) => {
   notiCount = { ...notiCountIntial };
-  setTimeout(() => {
-    let notis = document.getElementsByClassName("notis");
-    let currentService = utils_getCurrentService();
-    for (let noti of notis) {
-      notiCount['all'] += 1;
-      let notiService = currentService;
-      let url = noti.getAttributeNode("data-url").value;
-      if (url.includes("https")) {
-        url = url.split(".");
-        notiService = url[0].replace("https://", "")
-      };
-      if (!CONFIG.SERVICE[notiService]) continue;
-      notiCount[notiService] += 1;
+  let notis = document.getElementsByClassName("notis");
+  let currentService = utils_getCurrentService();
+  for (let noti of notis) {
+    notiCount['all'] += 1;
+    let notiService = currentService;
+    let url = noti.getAttributeNode("data-url").value;
+    if (url.includes("https")) {
+      url = url.split(".");
+      notiService = url[0].replace("https://", "")
     };
-    utils_rewriteNotiCountToButton();
-  }, 1000);
+    if (!CONFIG.SERVICE[notiService]) continue;
+    notiCount[notiService] += 1;
+  };
+  utils_rewriteNotiCountToButton();
 }
 
 const utils_rewriteNotiCountToButton = () => {
@@ -427,10 +543,9 @@ const utils_loadMoreNoti = ({ num = 10, isFirstTime = false }) => {
   utils_toogleElemByClass({ classname: ".load-more-noti", isDisable: true });
   let count = 0;
   let intervalClickLoadMore = setInterval(() => {
-    console.log("Noti open num", count);
     if (count === num) {
       clearInterval(intervalClickLoadMore);
-      noti_recountNoti();
+      setTimeout(() => { noti_recountNoti(); }, 500);
       utils_toogleElemByClass({ classname: ".load-more-noti", isDisable: false });
 
     }
@@ -448,31 +563,54 @@ const utils_toogleElemByClass = ({ classname = "", isDisable = false }) => {
 
 
 const utils_getUserConfig = async () => {
-  const pingUrl = 'https://script.google.com/macros/s/AKfycbwq3EpWpIY4zpebj3svXRsenyr_2kSTZvNuArOj5plyQE0Mp4EXVoGa4v4fmhwU4QkAkg/exec';
-  let userInfo = JSON.parse(localStorage.getItem('ajs_user_traits'));
-  userInfo = {
-    name: userInfo.name,
-    email: userInfo.email,
-    version,
-    env
-  };
+  try {
+    const pingUrl = 'https://script.google.com/macros/s/AKfycbwq3EpWpIY4zpebj3svXRsenyr_2kSTZvNuArOj5plyQE0Mp4EXVoGa4v4fmhwU4QkAkg/exec';
+    let userInfo = JSON.parse(localStorage.getItem('ajs_user_traits'));
+    let data = {
+      route: "getUserConfig",
+      name: userInfo.name,
+      email: userInfo.email,
+      version,
+      env
+    };
 
-  let cfg = await fetch(pingUrl, {
-    method: 'POST',
-    redirect: "follow",
-    body: JSON.stringify(userInfo),
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-  })
-  return cfg.json();
+    let cfg = await fetch(pingUrl, {
+      method: 'POST',
+      redirect: "follow",
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+    })
+    cfg = await cfg.json();
+
+    let notiSoundArr = cfg.data.notiSoundList;
+
+    let notiSoundObj = {};
+    notiSoundArr.forEach(e => {
+      notiSoundObj[e[0]] = {
+        value: e[1],
+        link: e[2]
+      }
+    });
+
+    localStorage.setItem("noti_sound_list", JSON.stringify(notiSoundArr));
+    localStorage.setItem("noti_sound_obj", JSON.stringify(notiSoundObj));
+    localStorage.setItem("sb_config", JSON.stringify(cfg.data.config));
+
+    console.log("🚀 Live config", cfg);
+    return cfg;
+  } catch (error) {
+    sendErrorLog(error)
+  }
 }
 
 
 const config_load = async () => {
   let cfg = CONFIG.ENABLE_SERVICES; // Default
-  let liveCfg = await utils_getUserConfig();
+  await utils_getUserConfig();
   let localCfg = localStorage.getItem("sb_config");
 
   if (!localCfg || localCfg.disableAll === null) { // If no, call API get cfg
+    let liveCfg = await utils_getUserConfig();
     cfg = liveCfg.data.config;
     localStorage.setItem("sb_config", JSON.stringify(cfg));
   } else {
@@ -482,9 +620,12 @@ const config_load = async () => {
   CONFIG.ENABLE_SERVICES = cfg;
   if (cfg.disableAll) return;
 
+  if (cfg.change_noti_sound) noti_changeSound();
+
   if (cfg.smarterNoti) {
     main_smarterNoti({
-      smarterNoti_faster_like_it_gone: cfg.smarterNoti_faster_like_it_gone
+      smarterNoti_faster_like_it_gone: cfg.smarterNoti_faster_like_it_gone,
+      changeNotiSound: cfg.change_noti_sound
     })
   };
   if (cfg.smarterTitle) main_smarterTitle();
@@ -531,12 +672,41 @@ const utils_hookApi = () => {
   };
 }
 
-const sendErrorLog = () => {
+const callAPI = async (route, data) => {
+  console.log("🚀 ~ file: dev.js ~ line 645 ~ callAPI ~ data", data);
+  const url = 'https://script.google.com/macros/s/AKfycbwq3EpWpIY4zpebj3svXRsenyr_2kSTZvNuArOj5plyQE0Mp4EXVoGa4v4fmhwU4QkAkg/exec';
+
+  let req = await fetch(url, {
+    method: 'POST',
+    redirect: "follow",
+    body: JSON.stringify({
+      route,
+      ...data
+    }),
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+  })
+  return req.json();
+}
+
+const sendErrorLog = async (error) => {
+  const pingUrl = 'https://script.google.com/macros/s/AKfycbwq3EpWpIY4zpebj3svXRsenyr_2kSTZvNuArOj5plyQE0Mp4EXVoGa4v4fmhwU4QkAkg/exec';
+
+  let sendErr = await fetch(pingUrl, {
+    method: 'POST',
+    redirect: "follow",
+    body: JSON.stringify({
+      route: "sendError",
+      error: error.message
+    }),
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+  })
+  console.log("🚀 ~ file: dev.js ~ line 546 ~ sendErrorLog ~ sendErr", sendErr);
 };
 
 try {
   config_load();
   utils_hookApi();
 } catch (error) {
-
+  console.log(error)
+  sendErrorLog(error)
 }

@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.8.5';
+const version = '0.2.8.6';
 const env = 'dev';
 
 // ==UserScript==
 // @name         Smarter Base.vn - DEV
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8.5
+// @version      0.2.8.6
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
