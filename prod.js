@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.8.6';
+const version = '0.2.9';
 const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn - PROD
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8.6
+// @version      0.2.9
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -213,7 +213,7 @@ const main_smarterNoti = (options) => {
     ["+5", plus5],
   ];
 
-  let titleDiv = document.querySelector("#base-notis > div.list.list-notis > div.-title");
+  let titleDiv = document.querySelector("#base-notis > div.list.notis-canvas > div.nc-header > div.base-title.-size-df");
   if (!titleDiv) return;
   titleDiv.innerHTML = "";
   titleDiv.appendChild(noti_grid_1);
@@ -251,13 +251,13 @@ const main_smarterNoti = (options) => {
     soundDivDiv.style.marginLeft = "5px";
 
     let btnConfirmSound = document.createElement("button");
-    btnConfirmSound.innerText = "Chọn";
+    btnConfirmSound.innerText = "Lưu";
     btnConfirmSound.id = "btn-select-sound";
     btnConfirmSound.style.display = "none";
     btnConfirmSound.onclick = () => noti_confirmSelectSound();;
 
     let tipTextDiv = document.createElement("label");
-    tipTextDiv.innerText = "Chọn xong nhớ F5";
+    tipTextDiv.innerText = "Lưu xong nhớ F5";
     tipTextDiv.id = "select-sound";
     tipTextDiv.style.display = "none";
 
@@ -537,14 +537,23 @@ const utils_rewriteNotiCountToButton = () => {
 }
 
 const utils_stylingFilterBar = () => {
-  let titleNoti = document.querySelector(".-title");
-  let listNoti = document.querySelector(".list-notis");
+  let titleNoti = document.querySelector("#base-notis > div.list.notis-canvas > div.nc-header > div.base-title.-size-df");
+  let listNoti = document.querySelector("#base-notis > div.list.notis-canvas");
   if (listNoti) listNoti.style.width = "60%";
   if (titleNoti) {
     titleNoti.style.width = "300%";
     titleNoti.style.height = "55px";
     titleNoti.style.background = "white";
+    titleNoti.style.top = "-12px";
+    titleNoti.style.paddingTop = "5px";
+    titleNoti.style.left = "-5px";
     document.querySelector("#notis-items-w").style.top = "55pxpx";
+  }
+
+  let newBaseTabDiv = document.querySelector(".base-tabs");
+  if (newBaseTabDiv) {
+    newBaseTabDiv.style.zIndex = 999;
+    newBaseTabDiv.style.top = "-32px"
   }
 }
 
