@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.9';
+const version = '0.2.9.1';
 const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn - PROD
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.9
+// @version      0.2.9.1
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -448,7 +448,7 @@ const utils_showNotiByService = (selectedService, filter = {}) => {
     let currentService = utils_getCurrentService();
     if (!noti) continue;
     let notiService = currentService;
-    let url = noti.getAttributeNode("data-url").value;
+    let url = noti.getAttributeNode("data-nurl").value;
     if (url.includes("https")) {
       url = url.split(".");
       notiService = url[0].replace("https://", "")
@@ -513,7 +513,7 @@ const noti_recountNoti = (reclickService = false) => {
   for (let noti of notis) {
     notiCount['all'] += 1;
     let notiService = currentService;
-    let url = noti.getAttributeNode("data-url").value;
+    let url = noti.getAttributeNode("data-nurl").value;
     if (url.includes("https")) {
       url = url.split(".");
       notiService = url[0].replace("https://", "")
