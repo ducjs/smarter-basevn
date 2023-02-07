@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.2.9.1';
+const version = '0.3.0';
 const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn - PROD
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.2.9.1
+// @version      0.3.0
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -79,7 +79,7 @@ let CONFIG = {
 
     "wwHyperlink": false,
     "smarterTaskTime": false,
-
+    "booking_time": false,
     "bonkSound": false,
     "bonkSoundUrl": ""
   }
@@ -448,7 +448,7 @@ const utils_showNotiByService = (selectedService, filter = {}) => {
     let currentService = utils_getCurrentService();
     if (!noti) continue;
     let notiService = currentService;
-    let url = noti.getAttributeNode("data-nurl").value;
+    let url = noti.getAttributeNode("data-url").value;
     if (url.includes("https")) {
       url = url.split(".");
       notiService = url[0].replace("https://", "")
@@ -513,7 +513,7 @@ const noti_recountNoti = (reclickService = false) => {
   for (let noti of notis) {
     notiCount['all'] += 1;
     let notiService = currentService;
-    let url = noti.getAttributeNode("data-nurl").value;
+    let url = noti.getAttributeNode("data-url").value;
     if (url.includes("https")) {
       url = url.split(".");
       notiService = url[0].replace("https://", "")
@@ -660,6 +660,9 @@ const config_load = async () => {
   if (currentUrl.includes("wework")) {
     if (cfg.wwHyperlink) main_makeWwCanHyperlink();
   };
+  if (currentUrl.includes("booking")) {
+    if (cfg.booking_time) booking_time();
+  };
   if (cfg.bonkSound) {
     if (document.querySelector("#audios")) {
       document
@@ -696,6 +699,9 @@ const utils_hookApi = () => {
     if (xhrUrl.includes("/ajax/task/display")) { // Page task WW
 
     };
+    if (xhrUrl.includes("booking.base.vn")) { // Page task WW
+      //showBtnBooking()
+    };
     return proxied.apply(this, [].slice.call(arguments));
   };
 }
@@ -730,6 +736,657 @@ const sendErrorLog = async (error) => {
   })
   console.log("🚀 ~ file: dev.js ~ line 546 ~ sendErrorLog ~ sendErr", sendErr);
 };
+
+const parser = new DOMParser();
+
+let clientData = {};
+let timeListByDay = []
+let resourceThatDay = {};
+let resourceList = {};
+
+let pickedDate = moment();
+
+let filters = {
+  room: [],
+  BOD: [],
+  manager: []
+}
+const showBtnBooking = () => {
+  let btnHTML = `<div style="display:inline-block;" class="button ok -success -rounded bold url" id="myBtn">So sánh lịch</div>`
+  btn = document.createElement('div');
+  btn.innerHTML = btnHTML
+  btn.style.display = "inline-block";
+  btn.style.width = "18%"
+  document.querySelector(".master-header  > div.base-title.-size-df").appendChild(btn)
+}
+const getBooking = async () => {
+  document.querySelector("#find-match").style.background = "gray"
+  genTimeListByDay();
+  let pickedLinks = ["https://booking.base.vn/flash-room-206",
+    "https://booking.base.vn/qvt-loki-room-419",
+    //"https://booking.base.vn/ceo-nguyen-the-anh-208", "https://booking.base.vn/dungnq-557", "https://booking.base.vn/thanhlh-564", "https://booking.base.vn/namth-543", "https://booking.base.vn/hulk-room-203"
+  ]
+  pickedLinks = filters.room.concat(filters.BOD).concat(filters.manager)
+  let selectedDate = "";
+  let resourceTimes = {};
+
+  let firstDayOfWeekUnix = pickedDate.clone().weekday(1).unix();
+  //for (let link of pickedLinks){
+  let countDone = 0;
+  pickedLinks.forEach(async (link) => {
+    let pageHTML = await callAPI_booking(link + "?ts=" + firstDayOfWeekUnix); // Loop by dropdown list
+    let idSplit = link.split("/");
+    let id = idSplit[3].split("-")[0]
+    pageHTML = pageHTML.replace(/Client/g, id)
+
+    let parsePageHTML = parser.parseFromString(pageHTML, "text/html");
+
+    let pageClient = ""
+    let scripts = parsePageHTML.querySelectorAll("head script");
+
+    for (let script of scripts) {
+      if (script.innerHTML.includes("var")) { // Fix var text
+        script.innerHTML += `return ${id};`
+        let fnc = Function(script.innerHTML)
+        clientData[id] = fnc();
+      }
+    }
+    let currentResource = clientData[id].pageData.title;
+    resourceTimes[currentResource] = {};
+    let currentPageBookings = clientData[id].pageData.bookings;
+
+
+    let bookedTimes = [];
+    resourceTimes[currentResource].name = currentResource;
+    resourceTimes[currentResource].key = clientData[id].path.base;
+    resourceTimes[currentResource].data = [];
+    for (let booking of currentPageBookings) {
+      resourceTimes[currentResource].groupId = booking.group_id;
+      if (pickedDate.isSame(moment.unix(booking.stime), 'day')) {
+        resourceTimes[currentResource].data.push([booking.stime, booking.etime, booking.name]);
+      };
+    }
+    countDone++;
+    if (countDone === pickedLinks.length) {
+      let tempArr = [];
+      for (let key of Object.keys(resourceTimes)) {
+        tempArr.push(resourceTimes[key])
+      }
+      tempArr.sort((a, b) => a.groupId - b.groupId);
+      let newObj = {};
+      tempArr.forEach(i => {
+        newObj[i.name] = i
+      })
+      document.querySelector("#find-match").style.background = "#42b814"
+
+      //Khúc này phải loop nhiều cồng kềnh vãi, nhưng mà kệ
+
+      resourceThatDay = newObj;
+      genTable();
+      return resourceTimes;
+    }
+  })// End loop
+  //}
+
+
+}
+
+const genTimeListByDay = () => {
+  let unixDateTimeList = [];
+  let minuteList = ["00", "15", "30", "45"]
+
+  let startHour = 7;
+  for (let i = startHour; i < startHour + 12; i++) {
+    let hourString = `${i >= 9 ? "" : "0"}${i + 1}`;
+    for (let minute = 0; minute < 4; minute++) {
+      let currentDate = moment(moment(pickedDate).format("DD/MM/YYYY") + " " + hourString + ":" + minuteList[minute], "DD/MM/YYYY HH:mm")
+      unixDateTimeList.push(currentDate);
+    };
+
+  };
+  timeListByDay = unixDateTimeList;
+  return unixDateTimeList;
+
+}
+
+const popupFindBooking = () => {
+  var d = document,
+    someThingStyles = d.createElement('style');
+  d.getElementsByTagName('head')[0].appendChild(someThingStyles);
+
+  someThingStyles.setAttribute('type', 'text/css');
+  let styles = "body{font-family:Arial,Helvetica,sans-serif}.modal{display:none;position:fixed;z-index:999;padding-top:100px;left:0;top:0;width:100%;height:100%;overflow:auto;background-color:rgba(0,0,0,.4)}.modal-content{position:relative;background-color:#fefefe;margin:auto;padding:0;border:1px solid #888;width:80%;box-shadow:0 4px 8px 0 rgba(0,0,0,.2),0 6px 20px 0 rgba(0,0,0,.19);-webkit-animation-name:animatetop;-webkit-animation-duration:.4s;animation-name:animatetop;animation-duration:.4s}@-webkit-keyframes animatetop{from{top:-300px;opacity:0}to{top:0;opacity:1}}@keyframes animatetop{from{top:-300px;opacity:0}to{top:0;opacity:1}}.close-modal{color:#fff;float:right;font-size:28px;font-weight:700}.close:focus,.close:hover{color:#000;text-decoration:none;cursor:pointer}.modal-footer,.modal-header{padding:2px 16px;background-color:#5cb85c;color:#fff}.modal-body{padding:2px 16px}"
+
+  var styleSheet = document.createElement("style")
+  styleSheet.innerText = styles
+  document.head.appendChild(styleSheet)
+
+  let btnHTML = `<div style="display:inline-block;" class="button ok -success -rounded bold url" id="myBtn">So sánh lịch</div>`
+  btn = document.createElement('div');
+  btn.innerHTML = btnHTML
+  btn.style.display = "inline-block";
+  btn.style.width = "18%"
+  document.querySelector(".master-header  > div.base-title.-size-df").appendChild(btn)
+
+  let modalHTML = `<div id="myModal" class="modal">
+
+  <!-- Modal content -->
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="close-modal">&times;</span>
+      <h2>Booking Matcher (Beta)</h2>
+    </div>
+    <div class="modal-body">
+    <div id="modal-filter" style="margin-bottom: 10px;"> </div>
+    </div>
+
+  </div>
+
+</div>`
+  let md = document.createElement('div');
+  md.innerHTML = modalHTML
+  document.getElementsByTagName("body")[0].appendChild(md)
+  // Get the modal
+  var modal = document.getElementById("myModal");
+
+  // Get the button that opens the modal
+  var btn = document.getElementById("myBtn");
+
+  // Get the <span> element that closes the modal
+  var span = document.getElementsByClassName("close-modal")[0];
+
+  // When the user clicks the button, open the modal
+  btn.onclick = function () {
+    modal.style.display = "block";
+  }
+
+  // When the user clicks on <span> (x), close the modal
+  span.onclick = function () {
+    modal.style.display = "none";
+  }
+
+  // When the user clicks anywhere outside of the modal, close it
+  window.onclick = function (event) {
+    //console.log(event)
+    if (event.target === document.querySelector(".modal-body")
+      || event.target === document.querySelector(".modal-filter")
+      || event.target === document.querySelector("div#find-match.button.ok.-success.-rounded.bold.url")
+
+    ) {
+      let sltMap = {
+        "room": "#modal-filter .select-room",
+        "BOD": "#modal-filter .select-BOD",
+        "manager": "#modal-filter .select-manager",
+
+      }
+      document.querySelector(sltMap.room).classList.remove('active')
+      document.querySelector(sltMap.BOD).classList.remove('active')
+      document.querySelector(sltMap.manager).classList.remove('active')
+    }
+    if (event.target == modal) {
+
+      modal.style.display = "none";
+    }
+  }
+
+
+};
+
+const genTable = async () => {
+  document.querySelectorAll("#myModal table").forEach(i => i.innerHTML = "")
+
+  let template = `
+   <tr>
+  <td class="booking-hour" rowspan="4">hour-minute</td> timeSlot
+</tr>
+<tr> timeSlot </tr>
+<tr> timeSlot </tr>
+<tr> timeSlot </tr>
+  `
+  let timeSlotTemplate = `<td class="booking-hour-resource"></td>`
+  let timeSlotString = "";
+  let timeString = "";
+  let stepMinuteIndex = 1;
+
+  for (let i = 0; i < timeListByDay.length; i++) {
+    let timeSlot = timeListByDay[i];
+    for (let key of Object.keys(resourceThatDay)) {
+      timeSlotTemplate = `<td class="booking-hour-resource-${resourceThatDay[key].key} tooltip"><span class="tooltiptext"></span></td>`
+      timeSlotString += timeSlotTemplate;
+    }
+    timeString = timeString.replace(/timeSlot/g, timeSlotString);
+    timeSlotString = "";
+
+    if (stepMinuteIndex === 1) {
+      let fourPairRow = template.replace("hour-minute", timeSlot.format("HH:mm"));
+      if (timeSlot.hour() === moment().hour()) fourPairRow = fourPairRow.replace("booking-hour", "booking-hour is-now")
+      timeString += fourPairRow;
+    }
+    if (stepMinuteIndex === 4) stepMinuteIndex = 0;
+    stepMinuteIndex++;
+  }
+
+  let styleTable = `
+    <style>
+   .modal-body table {
+     font-family: arial, sans-serif;
+     border-collapse: collapse;
+     width: 100%;
+   }
+
+   .modal-body td,
+   .modal-body th {
+     border: 1px solid #dddddd;
+     text-align: left;
+     padding: 4px;
+   }
+
+   .bb-none {
+     border-bottom-color: #0000 !important;
+   }
+
+   .bt-none {
+     border-top-color: #0000 !important;
+   }
+
+   .booking-hour {
+     text-align: center !important;
+   }
+
+   /* Tooltip container */
+   .tooltip {
+     //position: relative;
+     //display: inline-block;
+     //border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+   }
+
+   /* Tooltip text */
+   .tooltip .tooltiptext {
+     margin-left: 100px;
+     visibility: hidden;
+     width: 120px;
+     background-color: black;
+     color: #fff;
+     text-align: center;
+     padding: 5px 0;
+     border-radius: 6px;
+     /* Position the tooltip text - see examples below! */
+     position: absolute;
+     z-index: 1;
+   }
+
+   /* Show the tooltip text when you mouse over the tooltip container */
+   .tooltip:hover .tooltiptext {
+     visibility: visible;
+   }
+
+   .is-now {
+     background: #7dbdd5 !important;
+   }
+ </style>`
+
+  var styleSheet = document.createElement("style")
+  styleSheet.innerText = styleTable
+  document.head.appendChild(styleSheet)
+
+  let text = `
+    <table class="find-booking">
+  <tr>
+    <th style="padding: 8px">Thời gian</th> resourceNames
+  </tr> ${timeString}
+</table>
+`
+  let resourceNamesTemplate, resourceNames = ""
+  for (let key of Object.keys(resourceThatDay)) {
+    resourceNamesTemplate = `<th style="padding: 8px">${key}</th>`
+    resourceNames += resourceNamesTemplate;
+  }
+  text = text.replace("resourceNames", resourceNames)
+  text = text.replace(/ - Base Booking/g, "")
+
+  let tableDiv = document.createElement("table");
+  tableDiv.innerHTML = text;
+  document.querySelector(".modal-body").appendChild(tableDiv)
+
+
+  fillDataToTable();
+
+};
+
+const fillDataToTable = () => {
+
+  for (let key of Object.keys(resourceThatDay)) {
+    let resourceKey = resourceThatDay[key].key;
+    let resourceData = resourceThatDay[key].data;
+    let tds = document.querySelectorAll(`.modal-body tr .booking-hour-resource-${resourceKey}`);
+    for (let i = 0; i < timeListByDay.length; i++) {
+      tds[i].querySelector(".tooltiptext").innerHTML = moment(timeListByDay[i]).format("HH:mm")
+      for (let timeData of resourceData) {
+        if (moment(timeListByDay[i]).isBetween(moment.unix(timeData[0]).subtract(1, "minutes"), moment.unix(timeData[1]))) {
+          tds[i].querySelector(".tooltiptext").innerHTML = `${moment.unix(timeData[0]).format("HH:mm")}-${moment.unix(timeData[1]).format("HH:mm")} - ${timeData[2]} `
+          tds[i].style.background = "red";
+        }
+
+      }
+
+    }
+  }
+};
+
+const getResourceList = () => {
+  let groups = Client.groups; // []
+  let resources = {
+    "room": {
+      label: "Phòng họp",
+      items: []
+    },
+    "BOD": {
+      label: "BOD",
+      items: []
+    },
+    "manager": {
+      label: "manager",
+      items: []
+    }
+  };
+
+  groups[0].items.forEach(i => {
+    resources.room.items.push({
+      url: "https://booking.base.vn/" + i.path,
+      name: i.name,
+      id: i.id
+    })
+  })
+  groups[1].items.forEach(i => {
+    resources.BOD.items.push({
+      url: "https://booking.base.vn/" + i.path,
+      name: i.name,
+      id: i.id
+    })
+  })
+  groups[4].items.forEach(i => {
+    resources.manager.items.push({
+      url: "https://booking.base.vn/" + i.path,
+      name: i.name,
+      id: i.id
+    })
+  })
+  resourceList = resources;
+}
+
+const onSelectDate = (e) => {
+  pickedDate = moment(e.target.value, "YYYY-MM-DD")
+}
+
+const onClickFilterList = (type) => {
+  let sltMap = {
+    "room": "#modal-filter .select-room",
+    "BOD": "#modal-filter .select-BOD",
+    "manager": "#modal-filter .select-manager",
+
+  }
+  let currentHasActive = document.querySelector(sltMap[type]).classList.contains("active");
+  document.querySelector(sltMap.room).classList.remove('active')
+  document.querySelector(sltMap.BOD).classList.remove('active')
+  document.querySelector(sltMap.manager).classList.remove('active')
+
+  if (currentHasActive) document.querySelector(sltMap[type]).classList.add('active');
+  else document.querySelector(sltMap[type]).classList.remove('active');
+}
+
+const filter = () => {
+
+
+  let style = `.dropdown-check-list {
+  display: inline-block;
+}
+
+.dropdown-check-list .anchor {
+  position: relative;
+  cursor: pointer;
+  display: inline-block;
+  padding: 5px 50px 5px 10px;
+  border: 1px solid #ccc;
+}
+
+.dropdown-check-list .anchor:after {
+  position: absolute;
+  content: "";
+  border-left: 2px solid black;
+  border-top: 2px solid black;
+  padding: 5px;
+  right: 10px;
+  top: 20%;
+  -moz-transform: rotate(-135deg);
+  -ms-transform: rotate(-135deg);
+  -o-transform: rotate(-135deg);
+  -webkit-transform: rotate(-135deg);
+  transform: rotate(-135deg);
+}
+
+.dropdown-check-list .anchor:active:after {
+  right: 8px;
+  top: 21%;
+}
+
+.dropdown-check-list ul.items {
+  padding: 2px;
+  display: none;
+  margin: 0;
+  border: 1px solid #ccc;
+  border-top: none;
+}
+
+.dropdown-check-list ul.items li {
+  list-style: none;
+}
+
+.dropdown-check-list.visible .anchor {
+  color: #0094ff;
+}
+
+.dropdown-check-list.visible .items {
+  display: block;
+}`
+
+  let listRoom = `<div class="improve-select unselectable select-room" style="" >
+
+  <div class="is-display url" data-url="" onclick="document.querySelector('#modal-filter .select-room').classList.toggle('active')">
+    <div class="room-count">Phòng họp: 0</div>
+  </div>
+  <div class="is-box">
+    <div class="is-scroll scroll-y url">
+      <div class="is-items .select-room">
+      </div>
+    </div>
+    <div class="is-close" onclick="document.querySelector('#modal-filter .select-room').classList.remove('active')">Done</div>
+  </div>
+</div>`
+
+
+  let listBOD = `<div class="improve-select unselectable select-BOD" style="" >
+  <div class="is-display url" data-url=""  onclick="document.querySelector('#modal-filter .select-BOD').classList.toggle('active')">
+    <div class="BOD-count">BOD: 0</div>
+  </div>
+  <div class="is-box">
+    <div class="is-scroll scroll-y url">
+      <div class="is-items select-BOD">
+      </div>
+    </div>
+    <div class="is-close" onclick="document.querySelector('#modal-filter .select-BOD').classList.remove('active')">Done</div>
+  </div>
+</div>`
+
+
+  let listManager = `<div class="improve-select unselectable select-manager" style=""  >
+  <div class="is-display url" data-url="" onclick="document.querySelector('#modal-filter .select-manager').classList.toggle('active')">
+    <div class="manager-count">Quản lý: 0</div>
+  </div>
+  <div class="is-box">
+    <div class="is-scroll scroll-y url">
+      <div class="is-items select-manager">
+      </div>
+    </div>
+    <div class="is-close" onclick="document.querySelector('#modal-filter .select-manager').classList.remove('active')">Done</div>
+  </div>
+</div>`
+
+
+  let datePickerDiv = document.createElement("div");
+  let pickedDatePicker = moment().format("YYYY-MM-DD")
+  datePickerDiv.innerHTML = `<input type="date" id="filter-date" name="filter-date" style="width: 100%; height: 30px;" value="${pickedDatePicker}">`;
+  datePickerDiv.style.display = "inline-block";
+  datePickerDiv.style.marginRight = "10px";
+  datePickerDiv.style.top = "-1px";
+  datePickerDiv.style.height = "25px";
+  datePickerDiv.style.width = "235px";
+  datePickerDiv.style.position = "relative";
+  datePickerDiv.onchange = (e) => onSelectDate(e)
+
+
+  let listDiv = document.createElement("div");
+  listDiv.innerHTML = listRoom;
+  listDiv.style.display = "inline-block";
+  listDiv.style.marginRight = "10px";
+  listDiv.style.marginTop = "10px";
+  listDiv.style.width = "230px";
+  listDiv.onclick = () => onClickFilterList('room')
+
+  let listBODDiv = document.createElement("div");
+  listBODDiv.innerHTML = listBOD;
+  listBODDiv.style.display = "inline-block";
+  listBODDiv.style.marginTop = "10px";
+  listBODDiv.style.marginRight = "10px";
+  listBODDiv.style.width = "230px";
+  listBODDiv.onclick = () => onClickFilterList('BOD')
+
+  let listManagerDiv = document.createElement("div");
+  listManagerDiv.innerHTML = listManager;
+  listManagerDiv.style.display = "inline-block";
+  listManagerDiv.style.marginTop = "10px";
+  listManagerDiv.style.width = "230px";
+  listManagerDiv.onclick = () => onClickFilterList('manager')
+
+
+  var styleSheet = document.createElement("style")
+  styleSheet.innerText = style
+  document.head.appendChild(styleSheet)
+
+  let btnConfirmHTML = `<div class="button ok -success -rounded bold url" id="find-match">Tìm trận</div>`;
+  let btnConfirm = document.createElement("div")
+  btnConfirm.style.marginTop = "5px";
+  btnConfirm.style.width = "20%";
+  btnConfirm.innerHTML = btnConfirmHTML;
+  btnConfirm.onclick = () => { getBooking() };
+  /*
+  for (let sound of notiSoundList) {
+  let key = sound[0];
+  let value = sound[1];
+  let optionDiv = document.createElement("option");
+  optionDiv.value = key;
+  optionDiv.innerText = value;
+  optionDiv.selected = key === userNotiSoundKey ? "selected" : "";
+  // optionDiv.addEventListener("select", () => { noti_onSelectSound(username, key) });
+
+  selectResourceDiv.appendChild(optionDiv);
+  // let optionDiv = `<option value="${key}" onselect={noti_onSelectSound("${username}","${key}")}>${value}</option>`;
+}
+*/
+  document.querySelector('#modal-filter').appendChild(datePickerDiv);
+  document.querySelector('#modal-filter').appendChild(listDiv);
+  document.querySelector('#modal-filter').appendChild(listBODDiv);
+  document.querySelector('#modal-filter').appendChild(listManagerDiv);
+  document.querySelector('#modal-filter').appendChild(btnConfirm);
+  genFilterDropdown();
+};
+
+
+
+const onSelectFilter = (type, id, value) => {
+  if (!type) return;
+  let currentSelected = filters[type];
+
+  let currentIdSelected = document.querySelector(`#select-${type}-${id}`).classList.contains("active")
+  if (currentIdSelected) {
+    const index = currentSelected.indexOf(value);
+    if (index > -1) currentSelected.splice(index, 1);
+  } else currentSelected.push(value);
+  let mapName = {
+    room: "Phòng họp",
+    BOD: "BOD",
+    manager: "Quản lý",
+
+  }
+  document.querySelector(`.${type}-count`).innerHTML = `${mapName[type]}: ${currentSelected.length}`
+  document.querySelector(`#select-${type}-${id}`).classList.toggle("active");
+
+}
+
+const genFilterDropdown = () => {
+  let temp = `        <div class="is-item" onclick="Form.improveSelectHelper.pickup(this);" data-value="664">AnhLQ</div>
+        <div class="is-item" onclick="Form.improveSelectHelper.pickup(this);" data-value="663">TrucNT</div>
+        <div class="is-item active" onclick="Form.improveSelectHelper.pickup(this);" data-value="662">QuangNVD</div>
+        <div class="is-item" onclick="Form.improveSelectHelper.pickup(this);" data-value="661">TriND</div>`
+
+  if (resourceList.room.items.length) {
+    resourceList.room.items.forEach(i => {
+      let selectTemplate = `<div class="is-item" id="select-room-${i.id}" url="${i.url}">${i.name}</div>`
+      let selectDiv = document.createElement("div");
+      selectDiv.onclick = () => {
+        onSelectFilter("room", i.id, i.url)
+      }
+      selectDiv.innerHTML = selectTemplate
+      document.querySelector(".is-scroll .is-items").appendChild(selectDiv)
+    })
+  }
+
+  if (resourceList.BOD.items.length) {
+    resourceList.BOD.items.forEach(i => {
+      let selectTemplate = `<div class="is-item" id="select-BOD-${i.id}" url="${i.url}">${i.name}</div>`
+      let selectDiv = document.createElement("div");
+      selectDiv.onclick = () => {
+        onSelectFilter("BOD", i.id, i.url)
+      }
+      selectDiv.innerHTML = selectTemplate
+      document.querySelector(".is-scroll .select-BOD").appendChild(selectDiv)
+    })
+  }
+
+  if (resourceList.manager.items.length) {
+    resourceList.manager.items.forEach(i => {
+      let selectTemplate = `<div class="is-item" id="select-manager-${i.id}" url="${i.url}">${i.name}</div>`
+      let selectDiv = document.createElement("div");
+      selectDiv.onclick = () => {
+        onSelectFilter("manager", i.id, i.url)
+      }
+      selectDiv.innerHTML = selectTemplate
+      document.querySelector(".is-scroll .select-manager").appendChild(selectDiv)
+    })
+  }
+
+
+
+}
+
+
+const callAPI_booking = async (url, data) => {
+  let res = await fetch(url, {
+    method: 'GET',
+  });
+  let htmlRes = await res.text();
+  return htmlRes;
+};
+
+const booking_time = async () => {
+  genTimeListByDay();
+  popupFindBooking();
+  genTable();
+  //await getBooking();
+  getResourceList();
+  filter();
+
+
+}
 
 try {
   config_load();
