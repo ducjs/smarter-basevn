@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.3.0';
+const version = '0.3.1.4';
 const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn - PROD
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.3.0
+// @version      0.3.1.4
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -285,13 +285,13 @@ const noti_genSelectSoundDiv = () => {
   let email = userInfo.email;
   let userNotiSoundKey = sb_config.noti_sound_key;
   /*
-  <select name="cars" id="cars">
-    <option value="volvo">Volvo</option>
-    <option value="saab">Saab</option>
-    <option value="mercedes">Mercedes</option>
-    <option value="audi">Audi</option>
-  </select>
-  */
+<select name="cars" id="cars">
+  <option value="volvo">Volvo</option>
+  <option value="saab">Saab</option>
+  <option value="mercedes">Mercedes</option>
+  <option value="audi">Audi</option>
+</select>
+*/
 
   let selectDiv = document.createElement("select");
   selectDiv.name = "noti_sound_list";
@@ -448,7 +448,7 @@ const utils_showNotiByService = (selectedService, filter = {}) => {
     let currentService = utils_getCurrentService();
     if (!noti) continue;
     let notiService = currentService;
-    let url = noti.getAttributeNode("data-url").value;
+    let url = noti.getAttributeNode("data-nurl").value;
     if (url.includes("https")) {
       url = url.split(".");
       notiService = url[0].replace("https://", "")
@@ -513,7 +513,7 @@ const noti_recountNoti = (reclickService = false) => {
   for (let noti of notis) {
     notiCount['all'] += 1;
     let notiService = currentService;
-    let url = noti.getAttributeNode("data-url").value;
+    let url = noti.getAttributeNode("data-nurl").value;
     if (url.includes("https")) {
       url = url.split(".");
       notiService = url[0].replace("https://", "")
@@ -662,6 +662,7 @@ const config_load = async () => {
   };
   if (currentUrl.includes("booking")) {
     if (cfg.booking_time) booking_time();
+    utils_stylingBooking();
   };
   if (cfg.bonkSound) {
     if (document.querySelector("#audios")) {
@@ -700,6 +701,16 @@ const utils_hookApi = () => {
 
     };
     if (xhrUrl.includes("booking.base.vn")) { // Page task WW
+      setTimeout(() => {
+        if (cfg.booking_time) booking_time();
+        utils_stylingBooking();
+        filters = {
+          room: [],
+          BOD: [],
+          manager: []
+        }
+      }, 2000);
+
       //showBtnBooking()
     };
     return proxied.apply(this, [].slice.call(arguments));
@@ -745,7 +756,11 @@ let resourceThatDay = {};
 let resourceList = {};
 
 let pickedDate = moment();
-
+moment.updateLocale('en', {
+  week: {
+    dow: 1, // Monday is the first day of the week.
+  }
+});
 let filters = {
   room: [],
   BOD: [],
@@ -753,11 +768,11 @@ let filters = {
 }
 const showBtnBooking = () => {
   let btnHTML = `<div style="display:inline-block;" class="button ok -success -rounded bold url" id="myBtn">So sánh lịch</div>`
-  btn = document.createElement('div');
-  btn.innerHTML = btnHTML
-  btn.style.display = "inline-block";
-  btn.style.width = "18%"
-  document.querySelector(".master-header  > div.base-title.-size-df").appendChild(btn)
+  let btnMatch = document.createElement('div');
+  btnMatch.innerHTML = btnHTML
+  btnMatch.style.display = "inline-block";
+  btnMatch.style.width = "18%"
+  if (!document.querySelector("#myBtn")) document.querySelector(".master-header  > div.base-title.-size-df").appendChild(btnMatch)
 }
 const getBooking = async () => {
   document.querySelector("#find-match").style.background = "gray"
@@ -799,6 +814,7 @@ const getBooking = async () => {
     let bookedTimes = [];
     resourceTimes[currentResource].name = currentResource;
     resourceTimes[currentResource].key = clientData[id].path.base;
+    resourceTimes[currentResource].url = "https://booking.base.vn/" + clientData[id].path.base + "?ts=" + firstDayOfWeekUnix;
     resourceTimes[currentResource].data = [];
     for (let booking of currentPageBookings) {
       resourceTimes[currentResource].groupId = booking.group_id;
@@ -835,8 +851,8 @@ const genTimeListByDay = () => {
   let unixDateTimeList = [];
   let minuteList = ["00", "15", "30", "45"]
 
-  let startHour = 7;
-  for (let i = startHour; i < startHour + 12; i++) {
+  let startHour = 5;
+  for (let i = startHour; i < startHour + 15; i++) {
     let hourString = `${i >= 9 ? "" : "0"}${i + 1}`;
     for (let minute = 0; minute < 4; minute++) {
       let currentDate = moment(moment(pickedDate).format("DD/MM/YYYY") + " " + hourString + ":" + minuteList[minute], "DD/MM/YYYY HH:mm")
@@ -855,18 +871,18 @@ const popupFindBooking = () => {
   d.getElementsByTagName('head')[0].appendChild(someThingStyles);
 
   someThingStyles.setAttribute('type', 'text/css');
-  let styles = "body{font-family:Arial,Helvetica,sans-serif}.modal{display:none;position:fixed;z-index:999;padding-top:100px;left:0;top:0;width:100%;height:100%;overflow:auto;background-color:rgba(0,0,0,.4)}.modal-content{position:relative;background-color:#fefefe;margin:auto;padding:0;border:1px solid #888;width:80%;box-shadow:0 4px 8px 0 rgba(0,0,0,.2),0 6px 20px 0 rgba(0,0,0,.19);-webkit-animation-name:animatetop;-webkit-animation-duration:.4s;animation-name:animatetop;animation-duration:.4s}@-webkit-keyframes animatetop{from{top:-300px;opacity:0}to{top:0;opacity:1}}@keyframes animatetop{from{top:-300px;opacity:0}to{top:0;opacity:1}}.close-modal{color:#fff;float:right;font-size:28px;font-weight:700}.close:focus,.close:hover{color:#000;text-decoration:none;cursor:pointer}.modal-footer,.modal-header{padding:2px 16px;background-color:#5cb85c;color:#fff}.modal-body{padding:2px 16px}"
+  let styles = ".modal{display:none;position:fixed;z-index:999;padding-top:100px;left:0;top:0;width:100%;height:100%;overflow:auto;background-color:rgba(0,0,0,.4)}.modal-content{position:relative;background-color:#fefefe;margin:auto;padding:0;border:1px solid #888;width:80%;box-shadow:0 4px 8px 0 rgba(0,0,0,.2),0 6px 20px 0 rgba(0,0,0,.19);-webkit-animation-name:animatetop;-webkit-animation-duration:.4s;animation-name:animatetop;animation-duration:.4s}@-webkit-keyframes animatetop{from{top:-300px;opacity:0}to{top:0;opacity:1}}@keyframes animatetop{from{top:-300px;opacity:0}to{top:0;opacity:1}}.close-modal{color:#fff;float:right;font-size:28px;font-weight:700}.close:focus,.close:hover{color:#000;text-decoration:none;cursor:pointer}.modal-footer,.modal-header{padding:2px 16px;background-color:#5cb85c;color:#fff}.modal-body{padding:2px 16px}"
 
   var styleSheet = document.createElement("style")
   styleSheet.innerText = styles
   document.head.appendChild(styleSheet)
 
   let btnHTML = `<div style="display:inline-block;" class="button ok -success -rounded bold url" id="myBtn">So sánh lịch</div>`
-  btn = document.createElement('div');
-  btn.innerHTML = btnHTML
-  btn.style.display = "inline-block";
-  btn.style.width = "18%"
-  document.querySelector(".master-header  > div.base-title.-size-df").appendChild(btn)
+  let btnMatch = document.createElement('div');
+  btnMatch.innerHTML = btnHTML
+  btnMatch.style.display = "inline-block";
+  btnMatch.style.width = "18%"
+  if (!document.querySelector("#myBtn")) document.querySelector(".master-header  > div.base-title.-size-df").appendChild(btnMatch)
 
   let modalHTML = `<div id="myModal" class="modal">
 
@@ -1004,7 +1020,7 @@ const genTable = async () => {
    .tooltip .tooltiptext {
      margin-left: 100px;
      visibility: hidden;
-     width: 120px;
+     width: 200px;
      background-color: black;
      color: #fff;
      text-align: center;
@@ -1038,7 +1054,7 @@ const genTable = async () => {
 `
   let resourceNamesTemplate, resourceNames = ""
   for (let key of Object.keys(resourceThatDay)) {
-    resourceNamesTemplate = `<th style="padding: 8px">${key}</th>`
+    resourceNamesTemplate = `<th style="padding: 8px"> <a href=${resourceThatDay[key].url}>${key}</a> </th>`
     resourceNames += resourceNamesTemplate;
   }
   text = text.replace("resourceNames", resourceNames)
@@ -1063,7 +1079,7 @@ const fillDataToTable = () => {
       tds[i].querySelector(".tooltiptext").innerHTML = moment(timeListByDay[i]).format("HH:mm")
       for (let timeData of resourceData) {
         if (moment(timeListByDay[i]).isBetween(moment.unix(timeData[0]).subtract(1, "minutes"), moment.unix(timeData[1]))) {
-          tds[i].querySelector(".tooltiptext").innerHTML = `${moment.unix(timeData[0]).format("HH:mm")}-${moment.unix(timeData[1]).format("HH:mm")} - ${timeData[2]} `
+          tds[i].querySelector(".tooltiptext").innerHTML = `[${moment.unix(timeData[0]).format("DD/MM")}] ${moment.unix(timeData[0]).format("HH:mm")}-${moment.unix(timeData[1]).format("HH:mm")}<br/>${timeData[2]} `
           tds[i].style.background = "red";
         }
 
@@ -1136,7 +1152,7 @@ const onClickFilterList = (type) => {
 
 const filter = () => {
 
-
+  document.querySelector('#modal-filter').innerHTML = "";
   let style = `.dropdown-check-list {
   display: inline-block;
 }
@@ -1187,7 +1203,11 @@ const filter = () => {
 
 .dropdown-check-list.visible .items {
   display: block;
-}`
+}
+.improve-select .is-scroll{
+max-height: 500px !important;
+}
+`
 
   let listRoom = `<div class="improve-select unselectable select-room" style="" >
 
@@ -1195,7 +1215,7 @@ const filter = () => {
     <div class="room-count">Phòng họp: 0</div>
   </div>
   <div class="is-box">
-    <div class="is-scroll scroll-y url">
+    <div class="is-scroll scroll-y url" style="">
       <div class="is-items .select-room">
       </div>
     </div>
@@ -1279,19 +1299,20 @@ const filter = () => {
   btnConfirm.innerHTML = btnConfirmHTML;
   btnConfirm.onclick = () => { getBooking() };
   /*
-  for (let sound of notiSoundList) {
-  let key = sound[0];
-  let value = sound[1];
-  let optionDiv = document.createElement("option");
-  optionDiv.value = key;
-  optionDiv.innerText = value;
-  optionDiv.selected = key === userNotiSoundKey ? "selected" : "";
-  // optionDiv.addEventListener("select", () => { noti_onSelectSound(username, key) });
+for (let sound of notiSoundList) {
+let key = sound[0];
+let value = sound[1];
+let optionDiv = document.createElement("option");
+optionDiv.value = key;
+optionDiv.innerText = value;
+optionDiv.selected = key === userNotiSoundKey ? "selected" : "";
+// optionDiv.addEventListener("select", () => { noti_onSelectSound(username, key) });
 
-  selectResourceDiv.appendChild(optionDiv);
-  // let optionDiv = `<option value="${key}" onselect={noti_onSelectSound("${username}","${key}")}>${value}</option>`;
+selectResourceDiv.appendChild(optionDiv);
+// let optionDiv = `<option value="${key}" onselect={noti_onSelectSound("${username}","${key}")}>${value}</option>`;
 }
 */
+
   document.querySelector('#modal-filter').appendChild(datePickerDiv);
   document.querySelector('#modal-filter').appendChild(listDiv);
   document.querySelector('#modal-filter').appendChild(listBODDiv);
@@ -1368,6 +1389,18 @@ const genFilterDropdown = () => {
 
 }
 
+const utils_stylingBooking = () => {
+  if (currentUrl.includes("booking")) {
+    let items = document.querySelectorAll(".bitem");
+    items.forEach(i => {
+      let title = i.getAttribute("title");
+
+      if (title.trim().toLowerCase().includes("task")) i.style.background = "orange";
+      if (title.trim().toLowerCase().includes("meeting")) i.style.background = "#20bb20";
+    })
+  }
+
+}
 
 const callAPI_booking = async (url, data) => {
   let res = await fetch(url, {
