@@ -1,12 +1,12 @@
 console.log("=======FROM SWD WITH CODE=======")
-const version = '0.3.1.4';
+const version = '0.3.1.8';
 const env = 'prod';
 
 // ==UserScript==
 // @name         Smarter Base.vn - PROD
 // @description  Make base.vn smarter
 // @namespace    http://tampermonkey.net/
-// @version      0.3.1.4
+// @version      0.3.1.8
 // @author       duclh - SWD
 // @include      /https:\/\/(.*).base.vn/(.*)
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=base.vn
@@ -702,7 +702,7 @@ const utils_hookApi = () => {
     };
     if (xhrUrl.includes("booking.base.vn")) { // Page task WW
       setTimeout(() => {
-        if (cfg.booking_time) booking_time();
+        if (cfg.booking_time && !booking_time_loaded) booking_time();
         utils_stylingBooking();
         filters = {
           room: [],
@@ -730,6 +730,8 @@ const callAPI = async (route, data) => {
     }),
     headers: { 'Content-Type': 'text/plain;charset=utf-8' }
   })
+  console.log("🚀 ~ req:", req);
+  console.log("API OK")
   return req.json();
 }
 
@@ -754,7 +756,7 @@ let clientData = {};
 let timeListByDay = []
 let resourceThatDay = {};
 let resourceList = {};
-
+let booking_time_loaded = false;
 let pickedDate = moment();
 moment.updateLocale('en', {
   week: {
@@ -775,6 +777,9 @@ const showBtnBooking = () => {
   if (!document.querySelector("#myBtn")) document.querySelector(".master-header  > div.base-title.-size-df").appendChild(btnMatch)
 }
 const getBooking = async () => {
+  let userInfo = JSON.parse(localStorage.getItem('ajs_user_traits'));
+  callAPI("lookTimeBooking", { name: userInfo.name, email: userInfo.email, version, env })
+
   document.querySelector("#find-match").style.background = "gray"
   genTimeListByDay();
   let pickedLinks = ["https://booking.base.vn/flash-room-206",
@@ -876,13 +881,18 @@ const popupFindBooking = () => {
   var styleSheet = document.createElement("style")
   styleSheet.innerText = styles
   document.head.appendChild(styleSheet)
-
   let btnHTML = `<div style="display:inline-block;" class="button ok -success -rounded bold url" id="myBtn">So sánh lịch</div>`
   let btnMatch = document.createElement('div');
   btnMatch.innerHTML = btnHTML
   btnMatch.style.display = "inline-block";
   btnMatch.style.width = "18%"
   if (!document.querySelector("#myBtn")) document.querySelector(".master-header  > div.base-title.-size-df").appendChild(btnMatch)
+
+  let checkBookingTimeAppear = setInterval(() => {
+    if (!document.querySelector("#myBtn")) document.querySelector(".master-header  > div.base-title.-size-df").appendChild(btnMatch)
+  }, 500);
+
+
 
   let modalHTML = `<div id="myModal" class="modal">
 
@@ -1114,11 +1124,13 @@ const getResourceList = () => {
     })
   })
   groups[1].items.forEach(i => {
-    resources.BOD.items.push({
-      url: "https://booking.base.vn/" + i.path,
-      name: i.name,
-      id: i.id
-    })
+    if (!i.name.contains("Ánh Nguyệt") && !i.name.contains("Việt Hà") && !i.name.contains("Minh Khôi")) {
+      resources.BOD.items.push({
+        url: "https://booking.base.vn/" + i.path,
+        name: i.name,
+        id: i.id
+      })
+    }
   })
   groups[4].items.forEach(i => {
     resources.manager.items.push({
@@ -1294,10 +1306,21 @@ max-height: 500px !important;
 
   let btnConfirmHTML = `<div class="button ok -success -rounded bold url" id="find-match">Tìm trận</div>`;
   let btnConfirm = document.createElement("div")
+  btnConfirm.style.display = "inline-block";
   btnConfirm.style.marginTop = "5px";
+  btnConfirm.style.marginRight = "10px";
   btnConfirm.style.width = "20%";
   btnConfirm.innerHTML = btnConfirmHTML;
   btnConfirm.onclick = () => { getBooking() };
+
+  let btnHHTHTML = `<div class="button ok -success -rounded bold url" id="find-match">Phòng HHT</div>`;
+  let btnHHT = document.createElement("div")
+  btnHHT.style.display = "inline-block";
+  btnHHT.style.marginTop = "5px";
+  btnHHT.style.width = "20%";
+  btnHHT.innerHTML = btnHHTHTML;
+  btnHHT.onclick = () => { selectHHT() };
+
   /*
 for (let sound of notiSoundList) {
 let key = sound[0];
@@ -1318,16 +1341,30 @@ selectResourceDiv.appendChild(optionDiv);
   document.querySelector('#modal-filter').appendChild(listBODDiv);
   document.querySelector('#modal-filter').appendChild(listManagerDiv);
   document.querySelector('#modal-filter').appendChild(btnConfirm);
+  document.querySelector('#modal-filter').appendChild(btnHHT);
   genFilterDropdown();
 };
 
-
+const selectHHT = () => {
+  onClickFilterList('room')
+  let HHT_list = [
+    { url: "https://booking.base.vn/captain-room-205", id: "205" },
+    { url: "https://booking.base.vn/flash-room-206", id: "206" },
+    { url: "https://booking.base.vn/hulk-room-203", id: "203" },
+    { url: "https://booking.base.vn/iron-man-room-207", id: "207" },
+    { url: "https://booking.base.vn/thanos-room-284", id: "284" },
+    { url: "https://booking.base.vn/thor-room-204", id: "204" },
+  ]
+  for (let hht of HHT_list) {
+    onSelectFilter("room", hht.id, hht.url)
+  }
+}
 
 const onSelectFilter = (type, id, value) => {
   if (!type) return;
   let currentSelected = filters[type];
 
-  let currentIdSelected = document.querySelector(`#select-${type}-${id}`).classList.contains("active")
+  let currentIdSelected = document.querySelector(`#select-${type}-${id}`) && document.querySelector(`#select-${type}-${id}`).classList.contains("active")
   if (currentIdSelected) {
     const index = currentSelected.indexOf(value);
     if (index > -1) currentSelected.splice(index, 1);
@@ -1395,8 +1432,8 @@ const utils_stylingBooking = () => {
     items.forEach(i => {
       let title = i.getAttribute("title");
 
-      if (title.trim().toLowerCase().includes("task")) i.style.background = "orange";
-      if (title.trim().toLowerCase().includes("meeting")) i.style.background = "#20bb20";
+      // if (title.trim().toLowerCase().includes("task")) i.style.background = "orange";
+      // if (title.trim().toLowerCase().includes("meeting")) i.style.background = "#20bb20";
     })
   }
 
@@ -1411,8 +1448,9 @@ const callAPI_booking = async (url, data) => {
 };
 
 const booking_time = async () => {
-  genTimeListByDay();
+  booking_time_loaded = true;
   popupFindBooking();
+  genTimeListByDay();
   genTable();
   //await getBooking();
   getResourceList();
